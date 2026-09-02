@@ -49,6 +49,7 @@ client.interceptors.response.use(
       } catch (err) {
         processQueue(err, null);
         localStorage.removeItem('accessToken');
+        localStorage.removeItem('userEmail');
         window.location.href = '/login';
         return Promise.reject(err);
       } finally {

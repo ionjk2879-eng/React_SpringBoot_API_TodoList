@@ -23,7 +23,6 @@ export default function TodoForm({ categories, initial, onSubmit, onClose }: Pro
     await onSubmit({
       title,
       content: content || undefined,
-      // datetime-local 값은 "2026-09-03T18:00" 형식 → 초 추가 → LocalDateTime 파싱 가능
       deadline: deadline ? (deadline.length === 16 ? deadline + ':00' : deadline) : undefined,
       categoryId: categoryId ?? null,
     });
@@ -31,45 +30,100 @@ export default function TodoForm({ categories, initial, onSubmit, onClose }: Pro
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md mx-4">
-        <h2 className="text-xl font-bold text-gray-800 mb-4">
-          {initial ? 'Todo 수정' : 'Todo 추가'}
-        </h2>
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <input
-            type="text" placeholder="제목 *" value={title} required
-            onChange={e => setTitle(e.target.value)}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
-          />
-          <textarea
-            placeholder="내용 (선택)" value={content} rows={3}
-            onChange={e => setContent(e.target.value)}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
-          />
-          <input
-            type="datetime-local" value={deadline}
-            onChange={e => setDeadline(e.target.value)}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
-          />
-          <select
-            value={categoryId ?? ''}
-            onChange={e => setCategoryId(e.target.value ? Number(e.target.value) : null)}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+    <div
+      className="fixed inset-0 bg-black/20 backdrop-blur-[2px] flex items-center justify-center z-50 p-4"
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="bg-white rounded-xl shadow-2xl shadow-black/10 w-full max-w-md">
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-[#E9E9E7]">
+          <h2 className="text-sm font-semibold text-[#191919]">
+            {initial ? '할 일 수정' : '새 할 일'}
+          </h2>
+          <button
+            onClick={onClose}
+            className="w-6 h-6 flex items-center justify-center rounded text-[#C7C5C2] hover:text-[#787774] hover:bg-[#F0F0EE] transition-colors"
           >
-            <option value="">카테고리 없음</option>
-            {categories.map(c => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
-          <div className="flex gap-2 pt-2">
-            <button type="button" onClick={onClose}
-              className="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg hover:bg-gray-50 transition">
+            <svg className="w-3.5 h-3.5" viewBox="0 0 14 14" fill="none">
+              <path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="p-5 space-y-4">
+          <div>
+            <label className="block text-[11px] font-medium text-[#787774] uppercase tracking-wide mb-1.5">
+              제목 <span className="text-orange-400">*</span>
+            </label>
+            <input
+              type="text"
+              placeholder="할 일을 입력하세요"
+              value={title}
+              required
+              onChange={e => setTitle(e.target.value)}
+              autoFocus
+              className="w-full text-sm text-[#191919] placeholder-[#C7C5C2] border border-[#E9E9E7] rounded-lg px-3 py-2 focus:outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-100 transition-colors"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-medium text-[#787774] uppercase tracking-wide mb-1.5">
+              내용
+            </label>
+            <textarea
+              placeholder="세부 내용을 입력하세요 (선택)"
+              value={content}
+              rows={3}
+              onChange={e => setContent(e.target.value)}
+              className="w-full text-sm text-[#191919] placeholder-[#C7C5C2] border border-[#E9E9E7] rounded-lg px-3 py-2 focus:outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-100 transition-colors resize-none"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[11px] font-medium text-[#787774] uppercase tracking-wide mb-1.5">
+                마감일
+              </label>
+              <input
+                type="datetime-local"
+                value={deadline}
+                onChange={e => setDeadline(e.target.value)}
+                className="w-full text-sm text-[#191919] border border-[#E9E9E7] rounded-lg px-3 py-2 focus:outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-100 transition-colors"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-medium text-[#787774] uppercase tracking-wide mb-1.5">
+                카테고리
+              </label>
+              <select
+                value={categoryId ?? ''}
+                onChange={e => setCategoryId(e.target.value ? Number(e.target.value) : null)}
+                className="w-full text-sm text-[#191919] border border-[#E9E9E7] rounded-lg px-3 py-2 focus:outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-100 transition-colors bg-white"
+              >
+                <option value="">없음</option>
+                {categories.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="flex gap-2 pt-1">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 text-sm text-[#787774] border border-[#E9E9E7] py-2 rounded-lg hover:bg-[#F7F7F5] transition-colors"
+            >
               취소
             </button>
-            <button type="submit" disabled={loading}
-              className="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 rounded-lg transition disabled:opacity-50">
-              {loading ? '저장 중...' : '저장'}
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex-1 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium py-2 rounded-lg transition-colors disabled:opacity-50"
+            >
+              {loading ? '저장 중…' : (initial ? '수정하기' : '추가하기')}
             </button>
           </div>
         </form>

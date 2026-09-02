@@ -2,6 +2,20 @@
 
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
+  background: #F7F7F5;
+  color: #191919;
 }
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #E9E9E7; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #D4D4D0; }
+
+::selection { background: #FFF7ED; color: #C2410C; }
+
+:focus-visible { outline: 2px solid #F97316; outline-offset: 2px; }
+
+/* datetime-local input color */
+input[type="datetime-local"] { color-scheme: light; }

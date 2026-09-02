@@ -41,6 +41,10 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/**", "/h2-console/**").permitAll()
                 .anyRequest().authenticated()
             )
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint((request, response, authException) ->
+                    response.sendError(jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized"))
+            )
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
             .headers(h -> h.frameOptions(f -> f.disable())); // H2 console iframe
 
