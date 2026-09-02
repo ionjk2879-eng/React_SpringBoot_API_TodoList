@@ -23,7 +23,8 @@ export default function TodoForm({ categories, initial, onSubmit, onClose }: Pro
     await onSubmit({
       title,
       content: content || undefined,
-      deadline: deadline ? new Date(deadline).toISOString() : undefined,
+      // datetime-local 값은 "2026-09-03T18:00" 형식 → 초 추가 → LocalDateTime 파싱 가능
+      deadline: deadline ? (deadline.length === 16 ? deadline + ':00' : deadline) : undefined,
       categoryId: categoryId ?? null,
     });
     setLoading(false);
