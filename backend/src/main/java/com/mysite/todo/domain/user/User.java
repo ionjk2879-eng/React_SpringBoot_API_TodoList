@@ -24,6 +24,16 @@ public class User {
     @Column(nullable = false)
     private String password;
 
+    @Column(length = 50)
+    private String nickname;
+
+    @Lob
+    @Column(length = 1_000_000)
+    private byte[] profileImageData;
+
+    @Column(length = 50)
+    private String profileImageType;
+
     @Column(name = "refresh_token", length = 512)
     private String refreshToken;
 

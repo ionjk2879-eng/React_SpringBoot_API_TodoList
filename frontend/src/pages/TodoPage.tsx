@@ -1,16 +1,42 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getTodos, createTodo, updateTodo, toggleTodo, deleteTodo } from '../api/todos';
-import { getCategories, createCategory, deleteCategory } from '../api/categories';
+import { getCategories, createCategory, updateCategory, deleteCategory, uploadStampImage, deleteStampImage } from '../api/categories';
+import { getProfile, updateNickname, uploadProfileImage, deleteProfileImage } from '../api/users';
 import { logout } from '../api/auth';
 import TodoCard from '../components/TodoCard';
 import TodoForm from '../components/TodoForm';
 import Calendar from '../components/Calendar';
-import type { Todo, TodoRequest } from '../types';
+import StampIcon, { STAMP_SHAPES } from '../components/StampIcon';
+import CategoryStamp from '../components/CategoryStamp';
+import ProfileAvatar from '../components/ProfileAvatar';
+import ImageCropModal from '../components/ImageCropModal';
+import type { Category, Todo, TodoRequest } from '../types';
 
 interface Props { email: string; onLogout: () => void; }
 
 type StatusFilter = 'all' | 'todo' | 'progress' | 'done';
+
+function StampPicker({ value, onChange }: { value: string; onChange: (shape: string) => void }) {
+  return (
+    <div className="flex items-center gap-1 flex-wrap px-0.5">
+      {STAMP_SHAPES.map(s => (
+        <button
+          key={s.id}
+          type="button"
+          onClick={() => onChange(s.id)}
+          aria-label={s.label}
+          title={s.label}
+          className={`w-6 h-6 flex items-center justify-center rounded-md border transition-colors ${
+            value === s.id ? 'border-orange-400 bg-orange-50 text-orange-600' : 'border-[#E9E9E7] text-[#A8A8A4] hover:border-[#D4D4D0] hover:text-[#787774]'
+          }`}
+        >
+          <StampIcon shape={s.id} className="w-3 h-3" />
+        </button>
+      ))}
+    </div>
+  );
+}
 
 function classifyTodo(todo: Todo): 'todo' | 'progress' | 'done' {
   if (todo.completed) return 'done';
@@ -29,10 +55,40 @@ export default function TodoPage({ email, onLogout }: Props) {
   const [showForm, setShowForm] = useState(false);
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
   const [newCatName, setNewCatName] = useState('');
+  const [newCatStamp, setNewCatStamp] = useState('circle');
+  const [newCatImageBlob, setNewCatImageBlob] = useState<Blob | null>(null);
+  const [newCatImagePreviewUrl, setNewCatImagePreviewUrl] = useState<string | null>(null);
+  const [showCalendar, setShowCalendar] = useState(true);
+  const [sidebarView, setSidebarView] = useState<'categories' | 'settings'>('categories');
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [editingCategoryId, setEditingCategoryId] = useState<number | null>(null);
+  const [editingCategoryName, setEditingCategoryName] = useState('');
+  const [editingCategoryStamp, setEditingCategoryStamp] = useState('circle');
+  const [nicknameInput, setNicknameInput] = useState<string | null>(null);
+  const [cropContext, setCropContext] = useState<
+    { kind: 'profile' } | { kind: 'category'; categoryId: number } | { kind: 'newCategory' } | null
+  >(null);
+  const [cropImageUrl, setCropImageUrl] = useState<string | null>(null);
+  const [avatarVersion, setAvatarVersion] = useState(0);
+  const [stampVersions, setStampVersions] = useState<Record<number, number>>({});
 
-  const { data: todoPage, isLoading } = useQuery({
+  function bumpStampVersion(id: number) {
+    setStampVersions(v => ({ ...v, [id]: (v[id] ?? 0) + 1 }));
+  }
+
+  function extractErrorMessage(err: unknown, fallback: string): string {
+    const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+    return message ?? fallback;
+  }
+
+  const { data: todoPage, isLoading, isError } = useQuery({
     queryKey: ['todos', selectedCategory],
     queryFn: () => getTodos(0, selectedCategory, 500),
+  });
+
+  const { data: profile } = useQuery({
+    queryKey: ['profile'],
+    queryFn: getProfile,
   });
 
   const { data: categories = [] } = useQuery({
@@ -45,19 +101,50 @@ export default function TodoPage({ email, onLogout }: Props) {
   const createMutation = useMutation({
     mutationFn: createTodo,
     onSuccess: () => { invalidateTodos(); setShowForm(false); },
+    onError: err => setErrorMsg(extractErrorMessage(err, '할 일을 추가하지 못했습니다.')),
   });
 
   const updateMutation = useMutation({
     mutationFn: ({ id, req }: { id: number; req: TodoRequest }) => updateTodo(id, req),
     onSuccess: () => { invalidateTodos(); setEditingTodo(null); },
+    onError: err => setErrorMsg(extractErrorMessage(err, '할 일을 수정하지 못했습니다.')),
   });
 
-  const toggleMutation = useMutation({ mutationFn: toggleTodo, onSuccess: invalidateTodos });
-  const deleteMutation = useMutation({ mutationFn: deleteTodo, onSuccess: invalidateTodos });
+  const toggleMutation = useMutation({
+    mutationFn: toggleTodo,
+    onSuccess: invalidateTodos,
+    onError: err => setErrorMsg(extractErrorMessage(err, '완료 상태를 변경하지 못했습니다.')),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteTodo,
+    onSuccess: invalidateTodos,
+    onError: err => setErrorMsg(extractErrorMessage(err, '할 일을 삭제하지 못했습니다.')),
+  });
 
   const createCatMutation = useMutation({
-    mutationFn: () => createCategory(newCatName),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['categories'] }); setNewCatName(''); },
+    mutationFn: () => createCategory(newCatName, newCatStamp),
+    onSuccess: (created: Category) => {
+      qc.invalidateQueries({ queryKey: ['categories'] });
+      if (newCatImageBlob) {
+        uploadStampMutation.mutate({ id: created.id, blob: newCatImageBlob });
+      }
+      setNewCatName('');
+      setNewCatStamp('circle');
+      setNewCatImageBlob(null);
+      setNewCatImagePreviewUrl(prev => { if (prev) URL.revokeObjectURL(prev); return null; });
+    },
+    onError: err => setErrorMsg(extractErrorMessage(err, '카테고리를 추가하지 못했습니다.')),
+  });
+
+  const renameCatMutation = useMutation({
+    mutationFn: ({ id, name, stampShape }: { id: number; name: string; stampShape: string }) =>
+      updateCategory(id, name, stampShape),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['categories'] });
+      setEditingCategoryId(null);
+    },
+    onError: err => setErrorMsg(extractErrorMessage(err, '카테고리를 수정하지 못했습니다.')),
   });
 
   const deleteCatMutation = useMutation({
@@ -67,9 +154,103 @@ export default function TodoPage({ email, onLogout }: Props) {
       invalidateTodos();
       setSelectedCategory(undefined);
     },
+    onError: err => setErrorMsg(extractErrorMessage(err, '카테고리를 삭제하지 못했습니다.')),
   });
 
+  const uploadStampMutation = useMutation({
+    mutationFn: ({ id, blob }: { id: number; blob: Blob }) => uploadStampImage(id, blob),
+    onSuccess: (updated: Category) => {
+      bumpStampVersion(updated.id);
+      qc.invalidateQueries({ queryKey: ['categories'] });
+    },
+    onError: err => setErrorMsg(extractErrorMessage(err, '도장 이미지를 업로드하지 못했습니다.')),
+  });
+
+  const deleteStampMutation = useMutation({
+    mutationFn: (id: number) => deleteStampImage(id),
+    onSuccess: (updated: Category) => {
+      bumpStampVersion(updated.id);
+      qc.invalidateQueries({ queryKey: ['categories'] });
+      setEditingCategoryStamp('circle');
+    },
+    onError: err => setErrorMsg(extractErrorMessage(err, '도장 이미지를 삭제하지 못했습니다.')),
+  });
+
+  const updateNicknameMutation = useMutation({
+    mutationFn: (nickname: string) => updateNickname(nickname),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['profile'] }),
+    onError: err => setErrorMsg(extractErrorMessage(err, '닉네임을 변경하지 못했습니다.')),
+  });
+
+  const uploadProfileImageMutation = useMutation({
+    mutationFn: (blob: Blob) => uploadProfileImage(blob),
+    onSuccess: () => {
+      setAvatarVersion(v => v + 1);
+      qc.invalidateQueries({ queryKey: ['profile'] });
+    },
+    onError: err => setErrorMsg(extractErrorMessage(err, '프로필 이미지를 업로드하지 못했습니다.')),
+  });
+
+  const deleteProfileImageMutation = useMutation({
+    mutationFn: () => deleteProfileImage(),
+    onSuccess: () => {
+      setAvatarVersion(v => v + 1);
+      qc.invalidateQueries({ queryKey: ['profile'] });
+    },
+    onError: err => setErrorMsg(extractErrorMessage(err, '프로필 이미지를 삭제하지 못했습니다.')),
+  });
+
+  function openCrop(context: { kind: 'profile' } | { kind: 'category'; categoryId: number } | { kind: 'newCategory' }, file: File | undefined) {
+    if (!file) return;
+    setCropContext(context);
+    setCropImageUrl(URL.createObjectURL(file));
+  }
+
+  function closeCrop() {
+    setCropImageUrl(prev => { if (prev) URL.revokeObjectURL(prev); return null; });
+    setCropContext(null);
+  }
+
+  function handleCropConfirm(blob: Blob) {
+    if (cropContext?.kind === 'profile') {
+      uploadProfileImageMutation.mutate(blob);
+    } else if (cropContext?.kind === 'category') {
+      setEditingCategoryStamp('custom');
+      uploadStampMutation.mutate({ id: cropContext.categoryId, blob });
+    } else if (cropContext?.kind === 'newCategory') {
+      setNewCatImageBlob(blob);
+      setNewCatImagePreviewUrl(prev => {
+        if (prev) URL.revokeObjectURL(prev);
+        return URL.createObjectURL(blob);
+      });
+    }
+    closeCrop();
+  }
+
+  function clearNewCatImage() {
+    setNewCatImageBlob(null);
+    setNewCatImagePreviewUrl(prev => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+  }
+
   async function handleLogout() { await logout(); onLogout(); }
+
+  function handleDropTodo(todoId: number, dateStr: string) {
+    const todo = allTodos.find(t => t.id === todoId);
+    if (!todo) return;
+    const time = todo.deadline ? todo.deadline.slice(11, 19) : '09:00:00';
+    updateMutation.mutate({
+      id: todoId,
+      req: {
+        title: todo.title,
+        content: todo.content ?? undefined,
+        deadline: `${dateStr}T${time}`,
+        categoryId: todo.categoryId,
+      },
+    });
+  }
 
   const allTodos: Todo[] = todoPage?.content ?? [];
 
@@ -107,12 +288,17 @@ export default function TodoPage({ email, onLogout }: Props) {
           <span className="text-sm font-semibold text-[#191919]">Todo List</span>
         </div>
         <div className="flex-1" />
-        <span className="text-xs text-[#C7C5C2]">{email}</span>
         <button
-          onClick={handleLogout}
-          className="text-xs text-[#787774] hover:text-[#191919] px-2 py-1 rounded hover:bg-[#F0F0EE] transition-colors"
+          onClick={() => setShowCalendar(v => !v)}
+          className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-md transition-colors ${
+            showCalendar ? 'text-orange-600 bg-orange-50' : 'text-[#787774] hover:bg-[#F0F0EE] hover:text-[#191919]'
+          }`}
         >
-          로그아웃
+          <svg className="w-3.5 h-3.5" viewBox="0 0 14 14" fill="none">
+            <rect x="1.5" y="2.5" width="11" height="10" rx="1.5" stroke="currentColor" strokeWidth="1.2" />
+            <path d="M4.5 1v3M9.5 1v3M1.5 6h11" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+          </svg>
+          달력
         </button>
       </header>
 
@@ -120,73 +306,359 @@ export default function TodoPage({ email, onLogout }: Props) {
       <div className="flex flex-1 overflow-hidden">
 
         {/* Sidebar */}
-        <aside className="w-52 flex-shrink-0 flex flex-col py-5 overflow-y-auto">
-          <div className="px-4 mb-2">
-            <span className="text-[10px] font-semibold text-[#C7C5C2] uppercase tracking-widest">카테고리</span>
+        <aside className="w-52 flex-shrink-0 flex flex-col py-6 overflow-y-auto">
+
+          {/* Profile card */}
+          <div className="flex flex-col items-center text-center px-4 mb-6 flex-shrink-0">
+            <ProfileAvatar
+              email={email}
+              hasProfileImage={profile?.hasProfileImage ?? false}
+              version={avatarVersion}
+              className="w-12 h-12 text-base mb-2 flex-shrink-0"
+            />
+            <span className="text-sm font-semibold text-[#191919] truncate max-w-full">
+              {profile?.nickname || email.split('@')[0]}
+            </span>
+            <span className="text-[11px] text-[#C7C5C2] truncate max-w-full" title={email}>{email}</span>
           </div>
-          <nav className="flex-1 px-2 space-y-0.5">
+
+          {/* Nav */}
+          <nav className="flex-1 px-2 space-y-0.5 min-h-0">
             <button
-              onClick={() => { setSelectedCategory(undefined); setStatusFilter('all'); setSelectedDate(null); }}
-              className={`w-full flex items-center gap-2 text-sm px-2 py-1.5 rounded-md transition-colors ${
-                !selectedCategory ? 'bg-orange-50 text-orange-700 font-medium' : 'text-[#787774] hover:bg-[#EFEFED] hover:text-[#191919]'
+              onClick={() => setSidebarView('categories')}
+              className={`w-full flex items-center gap-2 text-sm px-2.5 py-2 rounded-md transition-colors ${
+                sidebarView === 'categories' ? 'bg-orange-50 text-orange-700 font-medium' : 'text-[#787774] hover:bg-[#EFEFED] hover:text-[#191919]'
               }`}
             >
-              <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${!selectedCategory ? 'bg-orange-400' : 'bg-[#D4D4D0]'}`} />
-              전체
+              <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 12 12" fill="none">
+                <rect x="1.5" y="1.5" width="4" height="4" rx="1" stroke="currentColor" strokeWidth="1.2" />
+                <rect x="6.5" y="1.5" width="4" height="4" rx="1" stroke="currentColor" strokeWidth="1.2" />
+                <rect x="1.5" y="6.5" width="4" height="4" rx="1" stroke="currentColor" strokeWidth="1.2" />
+                <rect x="6.5" y="6.5" width="4" height="4" rx="1" stroke="currentColor" strokeWidth="1.2" />
+              </svg>
+              카테고리
             </button>
-            {categories.map(cat => (
-              <div key={cat.id} className="group/cat flex items-center">
+
+            {sidebarView === 'categories' && (
+              <div className="pl-1 pt-0.5 space-y-0.5">
                 <button
-                  onClick={() => { setSelectedCategory(cat.id); setStatusFilter('all'); setSelectedDate(null); }}
-                  className={`flex-1 flex items-center gap-2 text-sm px-2 py-1.5 rounded-md transition-colors min-w-0 ${
-                    selectedCategory === cat.id ? 'bg-orange-50 text-orange-700 font-medium' : 'text-[#787774] hover:bg-[#EFEFED] hover:text-[#191919]'
+                  onClick={() => { setSelectedCategory(undefined); setStatusFilter('all'); setSelectedDate(null); }}
+                  className={`w-full flex items-center gap-2 text-sm px-2.5 py-1.5 rounded-md transition-colors ${
+                    !selectedCategory ? 'text-orange-700 font-medium' : 'text-[#787774] hover:bg-[#EFEFED] hover:text-[#191919]'
                   }`}
                 >
-                  <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${selectedCategory === cat.id ? 'bg-orange-400' : 'bg-[#D4D4D0]'}`} />
-                  <span className="truncate">{cat.name}</span>
+                  <StampIcon shape="check" className={`w-3 h-3 flex-shrink-0 ${!selectedCategory ? 'text-orange-500' : 'text-[#D4D4D0]'}`} />
+                  전체
                 </button>
-                <button
-                  onClick={() => deleteCatMutation.mutate(cat.id)}
-                  aria-label="카테고리 삭제"
-                  className="opacity-0 group-hover/cat:opacity-100 mr-1 w-5 h-5 flex items-center justify-center rounded text-[#C7C5C2] hover:text-red-400 hover:bg-red-50 transition-all"
-                >
-                  <svg className="w-3 h-3" viewBox="0 0 12 12" fill="none">
-                    <path d="M2 2l8 8M10 2L2 10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-                  </svg>
-                </button>
+                {categories.map(cat => (
+                  editingCategoryId === cat.id ? (
+                    <div key={cat.id} className="px-1 py-1.5 space-y-1.5 bg-[#FAFAF8] rounded-md">
+                      <input
+                        type="text"
+                        autoFocus
+                        value={editingCategoryName}
+                        onChange={e => setEditingCategoryName(e.target.value)}
+                        onKeyDown={e => e.key === 'Escape' && setEditingCategoryId(null)}
+                        className="w-full text-sm text-[#191919] border border-orange-300 rounded-md px-2 py-1 outline-none ring-1 ring-orange-100 min-w-0"
+                      />
+                      <StampPicker value={editingCategoryStamp} onChange={setEditingCategoryStamp} />
+                      <div className="flex items-center gap-2 px-0.5">
+                        {editingCategoryStamp === 'custom' && cat.hasCustomStamp ? (
+                          <>
+                            <CategoryStamp
+                              categoryId={cat.id}
+                              stampShape={cat.stampShape}
+                              hasCustomStamp={cat.hasCustomStamp}
+                              version={stampVersions[cat.id] ?? 0}
+                              className="w-6 h-6 text-rose-700"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => deleteStampMutation.mutate(cat.id)}
+                              className="text-xs text-[#787774] hover:text-red-500 transition-colors"
+                            >
+                              이미지 삭제
+                            </button>
+                          </>
+                        ) : (
+                          <label className="text-xs text-orange-600 hover:text-orange-700 font-medium cursor-pointer transition-colors">
+                            이미지로 내 도장 만들기
+                            <input
+                              type="file"
+                              accept="image/png,image/jpeg,image/webp"
+                              className="hidden"
+                              onChange={e => {
+                                const file = e.target.files?.[0];
+                                e.target.value = '';
+                                openCrop({ kind: 'category', categoryId: cat.id }, file);
+                              }}
+                            />
+                          </label>
+                        )}
+                      </div>
+                      <div className="flex gap-1 px-0.5">
+                        <button
+                          onClick={() => {
+                            if (editingCategoryName.trim()) {
+                              renameCatMutation.mutate({ id: cat.id, name: editingCategoryName.trim(), stampShape: editingCategoryStamp });
+                            }
+                          }}
+                          className="flex-1 text-xs text-orange-600 hover:text-orange-700 font-medium py-1 rounded-md hover:bg-orange-50 transition-colors"
+                        >
+                          저장
+                        </button>
+                        <button
+                          onClick={() => setEditingCategoryId(null)}
+                          className="flex-1 text-xs text-[#787774] hover:text-[#191919] py-1 rounded-md hover:bg-[#F0F0EE] transition-colors"
+                        >
+                          취소
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div key={cat.id} className="group/cat flex items-center">
+                      <button
+                        onClick={() => { setSelectedCategory(cat.id); setStatusFilter('all'); setSelectedDate(null); }}
+                        className={`flex-1 flex items-center gap-2 text-sm px-2.5 py-1.5 rounded-md transition-colors min-w-0 ${
+                          selectedCategory === cat.id ? 'text-orange-700 font-medium' : 'text-[#787774] hover:bg-[#EFEFED] hover:text-[#191919]'
+                        }`}
+                      >
+                        <CategoryStamp
+                          categoryId={cat.id}
+                          stampShape={cat.stampShape}
+                          hasCustomStamp={cat.hasCustomStamp}
+                          version={stampVersions[cat.id] ?? 0}
+                          className={`w-3 h-3 flex-shrink-0 ${selectedCategory === cat.id ? 'text-orange-500' : 'text-[#D4D4D0]'}`}
+                        />
+                        <span className="truncate">{cat.name}</span>
+                      </button>
+                      <button
+                        onClick={() => { setEditingCategoryId(cat.id); setEditingCategoryName(cat.name); setEditingCategoryStamp(cat.stampShape); }}
+                        aria-label="카테고리 수정"
+                        className="opacity-0 group-hover/cat:opacity-100 w-5 h-5 flex items-center justify-center rounded text-[#C7C5C2] hover:text-[#787774] hover:bg-[#F0F0EE] transition-all flex-shrink-0"
+                      >
+                        <svg className="w-3 h-3" viewBox="0 0 12 12" fill="none">
+                          <path d="M8.5 1.5l2 2-6 6H2.5v-2l6-6z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (window.confirm(`"${cat.name}" 카테고리를 삭제하시겠습니까?`)) deleteCatMutation.mutate(cat.id);
+                        }}
+                        aria-label="카테고리 삭제"
+                        className="opacity-0 group-hover/cat:opacity-100 mr-1 w-5 h-5 flex items-center justify-center rounded text-[#C7C5C2] hover:text-red-400 hover:bg-red-50 transition-all flex-shrink-0"
+                      >
+                        <svg className="w-3 h-3" viewBox="0 0 12 12" fill="none">
+                          <path d="M2 2l8 8M10 2L2 10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                        </svg>
+                      </button>
+                    </div>
+                  )
+                ))}
+
+                <div className="border border-[#E9E9E7] rounded-lg px-2.5 py-1.5 mt-1 space-y-1.5 bg-white focus-within:border-orange-300 focus-within:ring-1 focus-within:ring-orange-100 transition-all">
+                  <div className="flex items-center gap-1.5">
+                    <svg className="w-3 h-3 text-[#C7C5C2] flex-shrink-0" viewBox="0 0 12 12" fill="none">
+                      <path d="M6 1.5v9M1.5 6h9" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                    </svg>
+                    <input
+                      type="text"
+                      placeholder="새 카테고리"
+                      value={newCatName}
+                      onChange={e => setNewCatName(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && newCatName.trim() && createCatMutation.mutate()}
+                      className="flex-1 text-xs text-[#191919] placeholder-[#C7C5C2] bg-transparent outline-none min-w-0"
+                    />
+                    {newCatName.trim() && (
+                      <button onClick={() => createCatMutation.mutate()} className="text-xs text-orange-500 hover:text-orange-600 font-medium transition-colors flex-shrink-0">
+                        추가
+                      </button>
+                    )}
+                  </div>
+                  {newCatName.trim() && (
+                    newCatImagePreviewUrl ? (
+                      <div className="flex items-center gap-2 px-0.5">
+                        <img src={newCatImagePreviewUrl} className="w-6 h-6 rounded-full object-cover flex-shrink-0" alt="" />
+                        <button
+                          type="button"
+                          onClick={clearNewCatImage}
+                          className="text-xs text-[#787774] hover:text-red-500 transition-colors"
+                        >
+                          이미지 제거
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 flex-wrap px-0.5">
+                        <StampPicker value={newCatStamp} onChange={setNewCatStamp} />
+                        <label className="text-[11px] text-orange-600 hover:text-orange-700 font-medium cursor-pointer whitespace-nowrap transition-colors">
+                          이미지로 만들기
+                          <input
+                            type="file"
+                            accept="image/png,image/jpeg,image/webp"
+                            className="hidden"
+                            onChange={e => {
+                              const file = e.target.files?.[0];
+                              e.target.value = '';
+                              openCrop({ kind: 'newCategory' }, file);
+                            }}
+                          />
+                        </label>
+                      </div>
+                    )
+                  )}
+                </div>
               </div>
-            ))}
-          </nav>
-          <div className="px-3 mt-3">
-            <div className="flex items-center gap-1.5 border border-[#E9E9E7] rounded-lg px-2.5 py-1.5 focus-within:border-orange-300 focus-within:ring-1 focus-within:ring-orange-100 transition-all bg-white">
-              <svg className="w-3 h-3 text-[#C7C5C2] flex-shrink-0" viewBox="0 0 12 12" fill="none">
-                <path d="M6 1.5v9M1.5 6h9" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+            )}
+
+            <button
+              onClick={() => setSidebarView('settings')}
+              className={`w-full flex items-center gap-2 text-sm px-2.5 py-2 rounded-md transition-colors ${
+                sidebarView === 'settings' ? 'bg-orange-50 text-orange-700 font-medium' : 'text-[#787774] hover:bg-[#EFEFED] hover:text-[#191919]'
+              }`}
+            >
+              <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 12 12" fill="none">
+                <path d="M1.5 3h9M1.5 6h9M1.5 9h9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+                <circle cx="4" cy="3" r="1" fill="currentColor" />
+                <circle cx="8" cy="6" r="1" fill="currentColor" />
+                <circle cx="5" cy="9" r="1" fill="currentColor" />
               </svg>
-              <input
-                type="text"
-                placeholder="새 카테고리"
-                value={newCatName}
-                onChange={e => setNewCatName(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && newCatName.trim() && createCatMutation.mutate()}
-                className="flex-1 text-xs text-[#191919] placeholder-[#C7C5C2] bg-transparent outline-none min-w-0"
-              />
-              {newCatName.trim() && (
-                <button onClick={() => createCatMutation.mutate()} className="text-xs text-orange-500 hover:text-orange-600 font-medium transition-colors">
-                  추가
-                </button>
-              )}
-            </div>
+              설정
+            </button>
+          </nav>
+
+          {/* Logout — pinned to bottom, always visible */}
+          <div className="px-2 pt-3 mt-2 border-t border-[#E9E9E7] flex-shrink-0">
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center gap-2 text-sm px-2.5 py-2 rounded-md text-[#787774] hover:bg-[#EFEFED] hover:text-[#191919] transition-colors"
+            >
+              <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 12 12" fill="none">
+                <path d="M4.5 1.5H2a1 1 0 00-1 1v7a1 1 0 001 1h2.5M7.5 8.5L10.5 6 7.5 3.5M10.5 6H4.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              로그아웃
+            </button>
           </div>
         </aside>
 
         {/* Divider */}
         <div className="w-px bg-[#E9E9E7] flex-shrink-0" />
 
-        {/* Main — split 50/50 */}
+        {/* Main — split 50/50, or full-width Settings */}
         <div className="flex-1 flex overflow-hidden min-h-0">
+          {sidebarView === 'settings' ? (
+          <div className="flex-1 overflow-y-auto px-8 py-8 min-w-0">
 
+            {errorMsg && (
+              <div className="flex items-start gap-2 bg-red-50 border border-red-100 text-red-600 text-xs px-3 py-2.5 rounded-lg mb-4 max-w-md">
+                <svg className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" viewBox="0 0 14 14" fill="none">
+                  <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.2" />
+                  <path d="M7 4.5v3M7 9.5v.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+                </svg>
+                <span className="flex-1">{errorMsg}</span>
+                <button onClick={() => setErrorMsg(null)} className="text-red-400 hover:text-red-600 transition-colors flex-shrink-0">
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 14 14" fill="none">
+                    <path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                  </svg>
+                </button>
+              </div>
+            )}
+
+            <h1 className="text-xl font-semibold text-[#191919] mb-1">설정</h1>
+            <p className="text-sm text-[#787774] mb-6">계정 정보를 관리하세요</p>
+
+            <div className="max-w-md bg-white border border-[#E9E9E7] rounded-xl p-6 space-y-6">
+
+              {/* Profile image */}
+              <div className="flex items-center gap-4">
+                <ProfileAvatar
+                  email={email}
+                  hasProfileImage={profile?.hasProfileImage ?? false}
+                  version={avatarVersion}
+                  className="w-20 h-20 text-2xl flex-shrink-0"
+                />
+                <div>
+                  <label className="inline-block text-sm text-orange-600 hover:text-orange-700 font-medium cursor-pointer transition-colors">
+                    이미지 변경
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      className="hidden"
+                      onChange={e => {
+                        const file = e.target.files?.[0];
+                        e.target.value = '';
+                        openCrop({ kind: 'profile' }, file);
+                      }}
+                    />
+                  </label>
+                  {profile?.hasProfileImage && (
+                    <button
+                      type="button"
+                      onClick={() => deleteProfileImageMutation.mutate()}
+                      className="block mt-1 text-xs text-[#787774] hover:text-red-500 transition-colors"
+                    >
+                      이미지 제거
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="border-t border-[#E9E9E7]" />
+
+              {/* Nickname */}
+              <div>
+                <label className="block text-xs font-medium text-[#787774] uppercase tracking-wide mb-1.5">닉네임</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    placeholder={email.split('@')[0]}
+                    value={nicknameInput ?? profile?.nickname ?? ''}
+                    onChange={e => setNicknameInput(e.target.value)}
+                    maxLength={50}
+                    className="flex-1 text-sm text-[#191919] placeholder-[#C7C5C2] border border-[#E9E9E7] rounded-lg px-3 py-2 outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-100 transition-colors"
+                  />
+                  {nicknameInput !== null && nicknameInput !== (profile?.nickname ?? '') && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        updateNicknameMutation.mutate(nicknameInput);
+                        setNicknameInput(null);
+                      }}
+                      className="text-sm text-orange-600 hover:text-orange-700 font-medium flex-shrink-0 px-3 py-2 rounded-lg hover:bg-orange-50 transition-colors"
+                    >
+                      저장
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="border-t border-[#E9E9E7]" />
+
+              {/* Email (read-only) */}
+              <div>
+                <label className="block text-xs font-medium text-[#787774] uppercase tracking-wide mb-1.5">이메일</label>
+                <p className="text-sm text-[#191919]">{email}</p>
+              </div>
+            </div>
+          </div>
+          ) : (
+          <>
           {/* Left: Todo list */}
           <div className="flex-1 overflow-y-auto px-6 py-6 min-w-0">
+
+            {errorMsg && (
+              <div className="flex items-start gap-2 bg-red-50 border border-red-100 text-red-600 text-xs px-3 py-2.5 rounded-lg mb-4">
+                <svg className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" viewBox="0 0 14 14" fill="none">
+                  <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.2" />
+                  <path d="M7 4.5v3M7 9.5v.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+                </svg>
+                <span className="flex-1">{errorMsg}</span>
+                <button onClick={() => setErrorMsg(null)} className="text-red-400 hover:text-red-600 transition-colors flex-shrink-0">
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 14 14" fill="none">
+                    <path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                  </svg>
+                </button>
+              </div>
+            )}
 
             {/* Title row */}
             <div className="flex items-start justify-between mb-4">
@@ -259,6 +731,16 @@ export default function TodoPage({ email, onLogout }: Props) {
               <div className="flex items-center justify-center py-20">
                 <div className="w-5 h-5 border-2 border-[#E9E9E7] border-t-orange-500 rounded-full animate-spin" />
               </div>
+            ) : isError ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <p className="text-sm font-medium text-[#787774]">할 일을 불러오지 못했습니다</p>
+                <button
+                  onClick={() => qc.invalidateQueries({ queryKey: ['todos'] })}
+                  className="text-xs text-orange-600 hover:text-orange-700 font-medium mt-2 px-3 py-1.5 rounded-md hover:bg-orange-50 transition-colors"
+                >
+                  다시 시도
+                </button>
+              </div>
             ) : filteredTodos.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <div className="w-10 h-10 bg-[#F0F0EE] rounded-full flex items-center justify-center mb-3">
@@ -282,34 +764,54 @@ export default function TodoPage({ email, onLogout }: Props) {
                   <TodoCard
                     key={todo.id}
                     todo={todo}
+                    stampShape={categories.find(c => c.id === todo.categoryId)?.stampShape ?? 'check'}
+                    categoryId={todo.categoryId}
+                    hasCustomStamp={categories.find(c => c.id === todo.categoryId)?.hasCustomStamp ?? false}
+                    stampVersion={todo.categoryId != null ? stampVersions[todo.categoryId] ?? 0 : 0}
                     onToggle={id => toggleMutation.mutate(id)}
                     onEdit={t => setEditingTodo(t)}
-                    onDelete={id => deleteMutation.mutate(id)}
+                    onDelete={id => {
+                      if (window.confirm('이 할 일을 삭제하시겠습니까?')) deleteMutation.mutate(id);
+                    }}
                   />
                 ))}
               </div>
             )}
           </div>
 
-          {/* Divider */}
-          <div className="w-px bg-[#E9E9E7] flex-shrink-0" />
+          {showCalendar && (
+            <>
+              {/* Divider */}
+              <div className="w-px bg-[#E9E9E7] flex-shrink-0" />
 
-          {/* Right: Calendar */}
-          <div className="flex-1 overflow-y-auto px-6 py-6 min-w-0">
-            <Calendar
-              todos={allTodos}
-              selectedDate={selectedDate}
-              onDateSelect={date => {
-                setSelectedDate(date);
-                if (date) setStatusFilter('all');
-              }}
-            />
-          </div>
+              {/* Right: Calendar */}
+              <div className="flex-1 overflow-y-auto px-6 py-6 min-w-0">
+                <Calendar
+                  todos={allTodos}
+                  selectedDate={selectedDate}
+                  onDateSelect={date => {
+                    setSelectedDate(date);
+                    if (date) setStatusFilter('all');
+                  }}
+                  onDropTodo={handleDropTodo}
+                />
+              </div>
+            </>
+          )}
+          </>
+          )}
 
         </div>
       </div>
 
       {/* Modals */}
+      {cropImageUrl && (
+        <ImageCropModal
+          imageUrl={cropImageUrl}
+          onConfirm={handleCropConfirm}
+          onCancel={closeCrop}
+        />
+      )}
       {showForm && (
         <TodoForm
           categories={categories}

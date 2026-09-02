@@ -19,3 +19,25 @@ body {
 
 /* datetime-local input color */
 input[type="datetime-local"] { color-scheme: light; }
+
+@keyframes stamp-in {
+  0% { transform: scale(1.9) rotate(-16deg); opacity: 0; }
+  60% { transform: scale(0.92) rotate(-9deg); opacity: 1; }
+  100% { transform: scale(1) rotate(-9deg); opacity: 1; }
+}
+.stamp-mark { animation: stamp-in 0.22s ease-out; }
+
+@keyframes stamp-overlay-in {
+  0% { transform: scale(2.4) rotate(-20deg); opacity: 0; }
+  55% { transform: scale(0.94) rotate(-11deg); opacity: 0.9; }
+  100% { transform: scale(1) rotate(-11deg); opacity: 0.85; }
+}
+.stamp-overlay { animation: stamp-overlay-in 0.32s cubic-bezier(0.2, 0.8, 0.3, 1); }
+
+@keyframes card-press {
+  0% { transform: scale(1); }
+  35% { transform: scale(0.965); }
+  70% { transform: scale(1.008); }
+  100% { transform: scale(1); }
+}
+.card-press { animation: card-press 0.28s ease-out; }

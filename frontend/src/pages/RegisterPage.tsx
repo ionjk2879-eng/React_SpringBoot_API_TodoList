@@ -7,6 +7,7 @@ interface Props { onLogin: (email: string, token: string) => void; }
 export default function RegisterPage({ onLogin }: Props) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [passwordConfirm, setPasswordConfirm] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -15,6 +16,7 @@ export default function RegisterPage({ onLogin }: Props) {
     e.preventDefault();
     setError('');
     if (password.length < 8) { setError('비밀번호는 8자 이상이어야 합니다.'); return; }
+    if (password !== passwordConfirm) { setError('비밀번호가 일치하지 않습니다.'); return; }
     setLoading(true);
     try {
       const res = await register({ email, password });
@@ -84,6 +86,19 @@ export default function RegisterPage({ onLogin }: Props) {
                 className="w-full text-sm text-[#191919] placeholder-[#C7C5C2] border border-[#E9E9E7] rounded-lg px-3 py-2.5 focus:outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-100 transition-colors"
               />
               <p className="text-[11px] text-[#C7C5C2] mt-1.5">최소 8자 이상이어야 합니다</p>
+            </div>
+            <div>
+              <label className="block text-[11px] font-medium text-[#787774] uppercase tracking-wide mb-1.5">
+                비밀번호 확인
+              </label>
+              <input
+                type="password"
+                placeholder="비밀번호를 다시 입력하세요"
+                value={passwordConfirm}
+                onChange={e => setPasswordConfirm(e.target.value)}
+                required
+                className="w-full text-sm text-[#191919] placeholder-[#C7C5C2] border border-[#E9E9E7] rounded-lg px-3 py-2.5 focus:outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-100 transition-colors"
+              />
             </div>
             <button
               type="submit"

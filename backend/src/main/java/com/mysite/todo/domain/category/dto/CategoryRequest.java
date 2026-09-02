@@ -7,4 +7,6 @@ import lombok.Getter;
 public class CategoryRequest {
     @NotBlank
     private String name;
+
+    private String stampShape;
 }

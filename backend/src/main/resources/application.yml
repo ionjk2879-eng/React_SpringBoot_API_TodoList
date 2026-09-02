@@ -1,6 +1,10 @@
 spring:
   profiles:
     active: local
+  servlet:
+    multipart:
+      max-file-size: 2MB
+      max-request-size: 2MB
 
 ---
 spring:
@@ -34,7 +38,7 @@ jwt:
 
 app:
   cors:
-    allowed-origins: http://localhost:3000
+    allowed-origins: http://localhost:5173
 
 server:
   port: 8080

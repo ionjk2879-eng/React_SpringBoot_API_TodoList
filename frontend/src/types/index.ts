@@ -9,9 +9,17 @@ export interface TokenResponse {
   email: string;
 }
 
+export interface UserProfile {
+  email: string;
+  nickname: string | null;
+  hasProfileImage: boolean;
+}
+
 export interface Category {
   id: number;
   name: string;
+  stampShape: string;
+  hasCustomStamp: boolean;
   createdAt: string;
 }
 

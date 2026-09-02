@@ -20,13 +20,18 @@ export default function TodoForm({ categories, initial, onSubmit, onClose }: Pro
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    await onSubmit({
-      title,
-      content: content || undefined,
-      deadline: deadline ? (deadline.length === 16 ? deadline + ':00' : deadline) : undefined,
-      categoryId: categoryId ?? null,
-    });
-    setLoading(false);
+    try {
+      await onSubmit({
+        title,
+        content: content || undefined,
+        deadline: deadline ? (deadline.length === 16 ? deadline + ':00' : deadline) : undefined,
+        categoryId: categoryId ?? null,
+      });
+    } catch {
+      // 상위 컴포넌트가 에러 메시지를 표시한다; 폼은 다시 시도할 수 있도록 열어둔다.
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (

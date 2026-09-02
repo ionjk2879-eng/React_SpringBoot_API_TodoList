@@ -5,6 +5,7 @@ interface Props {
   todos: Todo[];
   selectedDate: string | null;
   onDateSelect: (date: string | null) => void;
+  onDropTodo: (todoId: number, dateStr: string) => void;
 }
 
 function classifyTodo(todo: Todo): 'todo' | 'progress' | 'done' {
@@ -24,8 +25,9 @@ const CHIP: Record<string, string> = {
 
 const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
 
-export default function Calendar({ todos, selectedDate, onDateSelect }: Props) {
+export default function Calendar({ todos, selectedDate, onDateSelect, onDropTodo }: Props) {
   const [viewDate, setViewDate] = useState(() => new Date());
+  const [dragOverDate, setDragOverDate] = useState<string | null>(null);
 
   const year = viewDate.getFullYear();
   const month = viewDate.getMonth();
@@ -124,8 +126,19 @@ export default function Calendar({ todos, selectedDate, onDateSelect }: Props) {
             <div
               key={dateStr}
               onClick={() => onDateSelect(isSelected ? null : dateStr)}
+              onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }}
+              onDragEnter={() => setDragOverDate(dateStr)}
+              onDragLeave={() => setDragOverDate(d => (d === dateStr ? null : d))}
+              onDrop={e => {
+                e.preventDefault();
+                setDragOverDate(null);
+                const todoId = Number(e.dataTransfer.getData('text/plain'));
+                if (todoId) onDropTodo(todoId, dateStr);
+              }}
               className={`p-1.5 cursor-pointer transition-colors min-h-[72px] ${
-                isSelected ? 'bg-orange-50 ring-2 ring-inset ring-orange-400' : 'bg-white hover:bg-[#FAFAF8]'
+                isSelected ? 'bg-orange-50 ring-2 ring-inset ring-orange-400' :
+                dragOverDate === dateStr ? 'bg-orange-50 ring-2 ring-inset ring-orange-300' :
+                'bg-white hover:bg-[#FAFAF8]'
               }`}
             >
               <span

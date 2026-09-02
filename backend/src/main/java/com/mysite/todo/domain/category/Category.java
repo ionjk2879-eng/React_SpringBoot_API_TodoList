@@ -27,6 +27,16 @@ public class Category {
     @Column(nullable = false, length = 100)
     private String name;
 
+    @Column(nullable = false, length = 20)
+    private String stampShape = "circle";
+
+    @Lob
+    @Column(length = 1_000_000)
+    private byte[] stampImageData;
+
+    @Column(length = 50)
+    private String stampImageType;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
