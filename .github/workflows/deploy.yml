@@ -21,16 +21,15 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.gradle/caches
-          key: ${{ runner.os }}-gradle-${{ hashFiles('backend/**/*.gradle*') }}
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', 'gradle/wrapper/gradle-wrapper.properties') }}
           restore-keys: ${{ runner.os }}-gradle-
 
       - name: Build backend JAR
-        working-directory: backend
         run: |
           chmod +x gradlew
-          ./gradlew bootJar --no-daemon
+          ./gradlew :backend:bootJar --no-daemon
 
-      - name: Stage JAR at repo root for SCP
+      - name: Stage JAR for SCP
         run: cp backend/build/libs/backend-1.0-SNAPSHOT.jar backend-1.0-SNAPSHOT.jar
 
       - name: Copy JAR to EC2
