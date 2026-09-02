@@ -29,26 +29,30 @@ jobs:
           chmod +x gradlew
           ./gradlew :backend:bootJar --no-daemon
 
-      - name: Set up SSH
+      - name: Set up SSH key
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/deploy.pem
+          printf '%s\n' "${{ secrets.EC2_SSH_KEY }}" | tr -d '\r' > ~/.ssh/deploy.pem
           chmod 600 ~/.ssh/deploy.pem
-          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
 
       - name: Copy JAR to EC2
-        run: scp -i ~/.ssh/deploy.pem backend/build/libs/backend-1.0-SNAPSHOT.jar ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:/home/ubuntu/app/backend-1.0-SNAPSHOT.jar
+        run: |
+          scp -i ~/.ssh/deploy.pem \
+            -o StrictHostKeyChecking=no \
+            backend/build/libs/backend-1.0-SNAPSHOT.jar \
+            ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:/home/ubuntu/app/backend-1.0-SNAPSHOT.jar
 
       - name: Pull frontend, build & restart on EC2
         run: |
-          ssh -i ~/.ssh/deploy.pem ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} << 'EOF'
-          set -e
-          cd ~/app
-          git pull origin main
-          cd frontend
-          npm install
-          npm run build
-          cd ..
-          sudo systemctl restart todoapp
-          echo "Deploy complete"
-          EOF
+          ssh -i ~/.ssh/deploy.pem \
+            -o StrictHostKeyChecking=no \
+            ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} \
+            'set -e
+            cd ~/app
+            git pull origin main
+            cd frontend
+            npm install
+            npm run build
+            cd ..
+            sudo systemctl restart todoapp
+            echo "Deploy complete"'
