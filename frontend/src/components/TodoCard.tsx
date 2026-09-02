@@ -36,7 +36,7 @@ export default function TodoCard({ todo, onToggle, onEdit, onDelete }: Props) {
       <button
         onClick={() => onToggle(todo.id)}
         aria-label={todo.completed ? '완료 취소' : '완료 처리'}
-        className={`mt-0.5 flex-shrink-0 w-[18px] h-[18px] rounded border transition-all flex items-center justify-center ${
+        className={`mt-0.5 flex-shrink-0 w-[18px] h-[18px] rounded-full border transition-all flex items-center justify-center ${
           todo.completed
             ? 'bg-green-500 border-green-500'
             : approaching
