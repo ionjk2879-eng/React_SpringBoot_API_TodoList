@@ -5,6 +5,7 @@ import { getCategories, createCategory, deleteCategory } from '../api/categories
 import { logout } from '../api/auth';
 import TodoCard from '../components/TodoCard';
 import TodoForm from '../components/TodoForm';
+import Calendar from '../components/Calendar';
 import type { Todo, TodoRequest } from '../types';
 
 interface Props { email: string; onLogout: () => void; }
@@ -24,6 +25,7 @@ export default function TodoPage({ email, onLogout }: Props) {
   const qc = useQueryClient();
   const [selectedCategory, setSelectedCategory] = useState<number | undefined>();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
   const [newCatName, setNewCatName] = useState('');
@@ -50,15 +52,8 @@ export default function TodoPage({ email, onLogout }: Props) {
     onSuccess: () => { invalidateTodos(); setEditingTodo(null); },
   });
 
-  const toggleMutation = useMutation({
-    mutationFn: toggleTodo,
-    onSuccess: invalidateTodos,
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: deleteTodo,
-    onSuccess: invalidateTodos,
-  });
+  const toggleMutation = useMutation({ mutationFn: toggleTodo, onSuccess: invalidateTodos });
+  const deleteMutation = useMutation({ mutationFn: deleteTodo, onSuccess: invalidateTodos });
 
   const createCatMutation = useMutation({
     mutationFn: () => createCategory(newCatName),
@@ -74,10 +69,7 @@ export default function TodoPage({ email, onLogout }: Props) {
     },
   });
 
-  async function handleLogout() {
-    await logout();
-    onLogout();
-  }
+  async function handleLogout() { await logout(); onLogout(); }
 
   const allTodos: Todo[] = todoPage?.content ?? [];
 
@@ -87,16 +79,18 @@ export default function TodoPage({ email, onLogout }: Props) {
     done: allTodos.filter(t => classifyTodo(t) === 'done').length,
   };
 
-  const filteredTodos = statusFilter === 'all'
+  const filteredTodos = selectedDate
+    ? allTodos.filter(t => t.deadline?.startsWith(selectedDate))
+    : statusFilter === 'all'
     ? allTodos
     : allTodos.filter(t => classifyTodo(t) === statusFilter);
 
   const activeCategory = categories.find(c => c.id === selectedCategory);
 
   const statusCards: { key: StatusFilter; label: string; count: number; color: string; activeColor: string }[] = [
-    { key: 'todo', label: '해야 할 일', count: counts.todo, color: 'text-[#787774] border-[#E9E9E7] bg-white', activeColor: 'border-[#191919] bg-[#191919] text-white' },
-    { key: 'progress', label: '진행 중', count: counts.progress, color: 'text-orange-600 border-orange-200 bg-orange-50', activeColor: 'border-orange-500 bg-orange-500 text-white' },
-    { key: 'done', label: '완료', count: counts.done, color: 'text-green-600 border-green-200 bg-green-50', activeColor: 'border-green-500 bg-green-500 text-white' },
+    { key: 'todo',     label: '해야 할 일', count: counts.todo,     color: 'text-[#787774] border-[#E9E9E7] bg-white',   activeColor: 'border-[#191919] bg-[#191919] text-white' },
+    { key: 'progress', label: '진행 중',    count: counts.progress, color: 'text-orange-600 border-orange-200 bg-orange-50', activeColor: 'border-orange-500 bg-orange-500 text-white' },
+    { key: 'done',     label: '완료',       count: counts.done,     color: 'text-green-600 border-green-200 bg-green-50',   activeColor: 'border-green-500 bg-green-500 text-white' },
   ];
 
   return (
@@ -132,7 +126,7 @@ export default function TodoPage({ email, onLogout }: Props) {
           </div>
           <nav className="flex-1 px-2 space-y-0.5">
             <button
-              onClick={() => { setSelectedCategory(undefined); setStatusFilter('all'); }}
+              onClick={() => { setSelectedCategory(undefined); setStatusFilter('all'); setSelectedDate(null); }}
               className={`w-full flex items-center gap-2 text-sm px-2 py-1.5 rounded-md transition-colors ${
                 !selectedCategory ? 'bg-orange-50 text-orange-700 font-medium' : 'text-[#787774] hover:bg-[#EFEFED] hover:text-[#191919]'
               }`}
@@ -143,7 +137,7 @@ export default function TodoPage({ email, onLogout }: Props) {
             {categories.map(cat => (
               <div key={cat.id} className="group/cat flex items-center">
                 <button
-                  onClick={() => { setSelectedCategory(cat.id); setStatusFilter('all'); }}
+                  onClick={() => { setSelectedCategory(cat.id); setStatusFilter('all'); setSelectedDate(null); }}
                   className={`flex-1 flex items-center gap-2 text-sm px-2 py-1.5 rounded-md transition-colors min-w-0 ${
                     selectedCategory === cat.id ? 'bg-orange-50 text-orange-700 font-medium' : 'text-[#787774] hover:bg-[#EFEFED] hover:text-[#191919]'
                   }`}
@@ -188,88 +182,131 @@ export default function TodoPage({ email, onLogout }: Props) {
         {/* Divider */}
         <div className="w-px bg-[#E9E9E7] flex-shrink-0" />
 
-        {/* Main */}
-        <main className="flex-1 overflow-y-auto px-8 py-6">
+        {/* Main — split 50/50 */}
+        <div className="flex-1 flex overflow-hidden min-h-0">
 
-          {/* Page title */}
-          <div className="flex items-start justify-between mb-5">
-            <div>
-              <h1 className="text-xl font-semibold text-[#191919]">
-                {activeCategory ? activeCategory.name : '전체 할 일'}
-              </h1>
-              <p className="text-sm text-[#787774] mt-0.5">
-                해야 할 일 {counts.todo}개 · 진행 중 {counts.progress}개 · 완료 {counts.done}개
-              </p>
-            </div>
-            <button
-              onClick={() => setShowForm(true)}
-              className="flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium px-3.5 py-2 rounded-lg transition-colors"
-            >
-              <svg className="w-3.5 h-3.5" viewBox="0 0 14 14" fill="none">
-                <path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-              </svg>
-              새 할 일
-            </button>
-          </div>
+          {/* Left: Todo list */}
+          <div className="flex-1 overflow-y-auto px-6 py-6 min-w-0">
 
-          {/* Status cards */}
-          <div className="grid grid-cols-3 gap-3 mb-6">
-            {statusCards.map(card => {
-              const isActive = statusFilter === card.key;
-              return (
-                <button
-                  key={card.key}
-                  onClick={() => setStatusFilter(isActive ? 'all' : card.key)}
-                  className={`flex flex-col items-start p-4 rounded-xl border-2 transition-all text-left ${
-                    isActive ? card.activeColor : `${card.color} hover:shadow-sm`
-                  }`}
-                >
-                  <span className={`text-2xl font-bold tracking-tight ${isActive ? 'text-white' : ''}`}>
-                    {card.count}
-                  </span>
-                  <span className={`text-xs font-medium mt-1 ${isActive ? 'text-white/80' : ''}`}>
-                    {card.label}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Todo list */}
-          {isLoading ? (
-            <div className="flex items-center justify-center py-24">
-              <div className="w-5 h-5 border-2 border-[#E9E9E7] border-t-orange-500 rounded-full animate-spin" />
-            </div>
-          ) : filteredTodos.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-center">
-              <div className="w-10 h-10 bg-[#F0F0EE] rounded-full flex items-center justify-center mb-3">
-                <svg className="w-5 h-5 text-[#C7C5C2]" viewBox="0 0 20 20" fill="none">
-                  <path d="M6 4H4a1 1 0 00-1 1v12a1 1 0 001 1h12a1 1 0 001-1V5a1 1 0 00-1-1h-2M6 4a1 1 0 011-1h6a1 1 0 011 1v0a1 1 0 01-1 1H7a1 1 0 01-1-1zM10 10v4M8 12h4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-                </svg>
+            {/* Title row */}
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <h1 className="text-xl font-semibold text-[#191919]">
+                  {activeCategory ? activeCategory.name : '전체 할 일'}
+                </h1>
+                <p className="text-sm text-[#787774] mt-0.5">
+                  해야 할 일 {counts.todo}개 · 진행 중 {counts.progress}개 · 완료 {counts.done}개
+                </p>
               </div>
-              <p className="text-sm font-medium text-[#787774]">
-                {statusFilter === 'all' ? '할 일이 없습니다' :
-                 statusFilter === 'todo' ? '해야 할 일이 없습니다' :
-                 statusFilter === 'progress' ? '진행 중인 할 일이 없습니다' : '완료된 항목이 없습니다'}
-              </p>
-              <p className="text-xs text-[#C7C5C2] mt-1">
-                {statusFilter === 'all' ? '위 버튼으로 추가해보세요' : '카드를 다시 클릭하면 전체 보기로 돌아갑니다'}
-              </p>
+              <button
+                onClick={() => setShowForm(true)}
+                className="flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium px-3.5 py-2 rounded-lg transition-colors flex-shrink-0"
+              >
+                <svg className="w-3.5 h-3.5" viewBox="0 0 14 14" fill="none">
+                  <path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                </svg>
+                새 할 일
+              </button>
             </div>
-          ) : (
-            <div className="bg-white border border-[#E9E9E7] rounded-xl overflow-hidden">
-              {filteredTodos.map(todo => (
-                <TodoCard
-                  key={todo.id}
-                  todo={todo}
-                  onToggle={id => toggleMutation.mutate(id)}
-                  onEdit={t => setEditingTodo(t)}
-                  onDelete={id => deleteMutation.mutate(id)}
-                />
-              ))}
+
+            {/* Status cards */}
+            <div className="grid grid-cols-3 gap-2 mb-5">
+              {statusCards.map(card => {
+                const isActive = !selectedDate && statusFilter === card.key;
+                return (
+                  <button
+                    key={card.key}
+                    onClick={() => {
+                      setSelectedDate(null);
+                      setStatusFilter(isActive ? 'all' : card.key);
+                    }}
+                    className={`flex flex-col items-start p-3.5 rounded-xl border-2 transition-all text-left ${
+                      isActive ? card.activeColor : `${card.color} hover:shadow-sm`
+                    }`}
+                  >
+                    <span className={`text-2xl font-bold tracking-tight ${isActive ? 'text-white' : ''}`}>
+                      {card.count}
+                    </span>
+                    <span className={`text-xs font-medium mt-0.5 ${isActive ? 'text-white/80' : ''}`}>
+                      {card.label}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
-          )}
-        </main>
+
+            {/* Date filter badge */}
+            {selectedDate && (
+              <div className="flex items-center gap-2 mb-4 px-3 py-2 bg-orange-50 border border-orange-100 rounded-lg">
+                <svg className="w-3.5 h-3.5 text-orange-500 flex-shrink-0" viewBox="0 0 14 14" fill="none">
+                  <rect x="1.5" y="2.5" width="11" height="10" rx="1.5" stroke="currentColor" strokeWidth="1.2" />
+                  <path d="M4.5 1v3M9.5 1v3M1.5 6h11" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+                </svg>
+                <span className="text-sm text-orange-700 flex-1">{selectedDate} 마감</span>
+                <button
+                  onClick={() => setSelectedDate(null)}
+                  className="text-orange-400 hover:text-orange-600 transition-colors"
+                >
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 14 14" fill="none">
+                    <path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                  </svg>
+                </button>
+              </div>
+            )}
+
+            {/* Todo list */}
+            {isLoading ? (
+              <div className="flex items-center justify-center py-20">
+                <div className="w-5 h-5 border-2 border-[#E9E9E7] border-t-orange-500 rounded-full animate-spin" />
+              </div>
+            ) : filteredTodos.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="w-10 h-10 bg-[#F0F0EE] rounded-full flex items-center justify-center mb-3">
+                  <svg className="w-5 h-5 text-[#C7C5C2]" viewBox="0 0 20 20" fill="none">
+                    <path d="M6 4H4a1 1 0 00-1 1v12a1 1 0 001 1h12a1 1 0 001-1V5a1 1 0 00-1-1h-2M6 4a1 1 0 011-1h6a1 1 0 011 1v0a1 1 0 01-1 1H7a1 1 0 01-1-1z" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+                  </svg>
+                </div>
+                <p className="text-sm font-medium text-[#787774]">
+                  {selectedDate ? '해당 날짜의 할 일이 없습니다' :
+                   statusFilter === 'todo' ? '해야 할 일이 없습니다' :
+                   statusFilter === 'progress' ? '진행 중인 할 일이 없습니다' :
+                   statusFilter === 'done' ? '완료된 항목이 없습니다' : '할 일이 없습니다'}
+                </p>
+                <p className="text-xs text-[#C7C5C2] mt-1">
+                  {selectedDate ? '달력에서 다른 날짜를 선택하거나 클릭해서 해제하세요' : '위 버튼으로 추가해보세요'}
+                </p>
+              </div>
+            ) : (
+              <div className="bg-white border border-[#E9E9E7] rounded-xl overflow-hidden">
+                {filteredTodos.map(todo => (
+                  <TodoCard
+                    key={todo.id}
+                    todo={todo}
+                    onToggle={id => toggleMutation.mutate(id)}
+                    onEdit={t => setEditingTodo(t)}
+                    onDelete={id => deleteMutation.mutate(id)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Divider */}
+          <div className="w-px bg-[#E9E9E7] flex-shrink-0" />
+
+          {/* Right: Calendar */}
+          <div className="flex-1 overflow-y-auto px-6 py-6 min-w-0">
+            <Calendar
+              todos={allTodos}
+              selectedDate={selectedDate}
+              onDateSelect={date => {
+                setSelectedDate(date);
+                if (date) setStatusFilter('all');
+              }}
+            />
+          </div>
+
+        </div>
       </div>
 
       {/* Modals */}
