@@ -76,11 +76,11 @@ export default function ImageCropModal({ imageUrl, onConfirm, onCancel }: Props)
       onClick={e => { if (e.target === e.currentTarget) onCancel(); }}
     >
       <div className="bg-white rounded-xl shadow-2xl shadow-black/10 p-5 w-full max-w-sm">
-        <h2 className="text-sm font-semibold text-[#191919] mb-1">이미지 범위 지정</h2>
-        <p className="text-xs text-[#787774] mb-3">드래그해서 위치를 옮기고, 슬라이더로 확대해보세요</p>
+        <h2 className="text-sm font-semibold text-[#1D1D1F] mb-1">이미지 범위 지정</h2>
+        <p className="text-xs text-[#86868B] mb-3">드래그해서 위치를 옮기고, 슬라이더로 확대해보세요</p>
 
         <div
-          className="relative mx-auto rounded-lg bg-[#F0F0EE] overflow-hidden touch-none cursor-grab active:cursor-grabbing select-none"
+          className="relative mx-auto rounded-lg bg-[#ECECEF] overflow-hidden touch-none cursor-grab active:cursor-grabbing select-none"
           style={{ width: BOX, height: BOX }}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
@@ -113,7 +113,7 @@ export default function ImageCropModal({ imageUrl, onConfirm, onCancel }: Props)
         </div>
 
         <div className="flex items-center gap-2 mt-3 px-0.5">
-          <svg className="w-3.5 h-3.5 text-[#787774] flex-shrink-0" viewBox="0 0 14 14" fill="none">
+          <svg className="w-3.5 h-3.5 text-[#86868B] flex-shrink-0" viewBox="0 0 14 14" fill="none">
             <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.2" />
             <path d="M9.5 9.5L12.5 12.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
           </svg>
@@ -131,7 +131,7 @@ export default function ImageCropModal({ imageUrl, onConfirm, onCancel }: Props)
         <div className="flex gap-2 mt-4">
           <button
             onClick={onCancel}
-            className="flex-1 text-sm text-[#787774] border border-[#E9E9E7] py-2 rounded-lg hover:bg-[#F7F7F5] transition-colors"
+            className="flex-1 text-sm text-[#86868B] border border-[#D2D2D7] py-2 rounded-lg hover:bg-[#F5F5F7] transition-colors"
           >
             취소
           </button>

@@ -42,13 +42,13 @@ export default function TodoForm({ categories, initial, onSubmit, onClose }: Pro
       <div className="bg-white rounded-xl shadow-2xl shadow-black/10 w-full max-w-md">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-[#E9E9E7]">
-          <h2 className="text-sm font-semibold text-[#191919]">
+        <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-[#D2D2D7]">
+          <h2 className="text-sm font-semibold text-[#1D1D1F]">
             {initial ? '할 일 수정' : '새 할 일'}
           </h2>
           <button
             onClick={onClose}
-            className="w-6 h-6 flex items-center justify-center rounded text-[#C7C5C2] hover:text-[#787774] hover:bg-[#F0F0EE] transition-colors"
+            className="w-6 h-6 flex items-center justify-center rounded text-[#AEAEB2] hover:text-[#86868B] hover:bg-[#ECECEF] transition-colors"
           >
             <svg className="w-3.5 h-3.5" viewBox="0 0 14 14" fill="none">
               <path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
@@ -59,7 +59,7 @@ export default function TodoForm({ categories, initial, onSubmit, onClose }: Pro
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
           <div>
-            <label className="block text-[11px] font-medium text-[#787774] uppercase tracking-wide mb-1.5">
+            <label className="block text-[11px] font-medium text-[#86868B] uppercase tracking-wide mb-1.5">
               제목 <span className="text-orange-400">*</span>
             </label>
             <input
@@ -69,12 +69,12 @@ export default function TodoForm({ categories, initial, onSubmit, onClose }: Pro
               required
               onChange={e => setTitle(e.target.value)}
               autoFocus
-              className="w-full text-sm text-[#191919] placeholder-[#C7C5C2] border border-[#E9E9E7] rounded-lg px-3 py-2 focus:outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-100 transition-colors"
+              className="w-full text-sm text-[#1D1D1F] placeholder-[#AEAEB2] border border-[#D2D2D7] rounded-lg px-3 py-2 focus:outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-100 transition-colors"
             />
           </div>
 
           <div>
-            <label className="block text-[11px] font-medium text-[#787774] uppercase tracking-wide mb-1.5">
+            <label className="block text-[11px] font-medium text-[#86868B] uppercase tracking-wide mb-1.5">
               내용
             </label>
             <textarea
@@ -82,30 +82,30 @@ export default function TodoForm({ categories, initial, onSubmit, onClose }: Pro
               value={content}
               rows={3}
               onChange={e => setContent(e.target.value)}
-              className="w-full text-sm text-[#191919] placeholder-[#C7C5C2] border border-[#E9E9E7] rounded-lg px-3 py-2 focus:outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-100 transition-colors resize-none"
+              className="w-full text-sm text-[#1D1D1F] placeholder-[#AEAEB2] border border-[#D2D2D7] rounded-lg px-3 py-2 focus:outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-100 transition-colors resize-none"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[11px] font-medium text-[#787774] uppercase tracking-wide mb-1.5">
+              <label className="block text-[11px] font-medium text-[#86868B] uppercase tracking-wide mb-1.5">
                 마감일
               </label>
               <input
                 type="datetime-local"
                 value={deadline}
                 onChange={e => setDeadline(e.target.value)}
-                className="w-full text-sm text-[#191919] border border-[#E9E9E7] rounded-lg px-3 py-2 focus:outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-100 transition-colors"
+                className="w-full text-sm text-[#1D1D1F] border border-[#D2D2D7] rounded-lg px-3 py-2 focus:outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-100 transition-colors"
               />
             </div>
             <div>
-              <label className="block text-[11px] font-medium text-[#787774] uppercase tracking-wide mb-1.5">
+              <label className="block text-[11px] font-medium text-[#86868B] uppercase tracking-wide mb-1.5">
                 카테고리
               </label>
               <select
                 value={categoryId ?? ''}
                 onChange={e => setCategoryId(e.target.value ? Number(e.target.value) : null)}
-                className="w-full text-sm text-[#191919] border border-[#E9E9E7] rounded-lg px-3 py-2 focus:outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-100 transition-colors bg-white"
+                className="w-full text-sm text-[#1D1D1F] border border-[#D2D2D7] rounded-lg px-3 py-2 focus:outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-100 transition-colors bg-white"
               >
                 <option value="">없음</option>
                 {categories.map(c => (
@@ -119,7 +119,7 @@ export default function TodoForm({ categories, initial, onSubmit, onClose }: Pro
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 text-sm text-[#787774] border border-[#E9E9E7] py-2 rounded-lg hover:bg-[#F7F7F5] transition-colors"
+              className="flex-1 text-sm text-[#86868B] border border-[#D2D2D7] py-2 rounded-lg hover:bg-[#F5F5F7] transition-colors"
             >
               취소
             </button>

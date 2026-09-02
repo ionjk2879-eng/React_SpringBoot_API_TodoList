@@ -1,21 +1,52 @@
 @import "tailwindcss";
 
+/* Apple system-color tuning: remaps Tailwind's default scales so every
+   existing orange-*/green-*/red-*/blue-* utility across the app renders
+   in the macOS/iOS system palette instead of Tailwind's defaults. */
+@theme {
+  --color-orange-50: #FFF4E5;
+  --color-orange-100: #FFE9CC;
+  --color-orange-200: #FFDDAE;
+  --color-orange-300: #FFC77A;
+  --color-orange-400: #FFB454;
+  --color-orange-500: #FF9F0A;
+  --color-orange-600: #E0890A;
+  --color-orange-700: #B5650A;
+  --color-orange-800: #8A4D08;
+
+  --color-green-50: #E7F9EC;
+  --color-green-100: #D1F2DA;
+  --color-green-200: #A8E6BA;
+  --color-green-500: #34C759;
+  --color-green-600: #248A3D;
+  --color-green-700: #1B6B2F;
+
+  --color-red-50: #FFEBEA;
+  --color-red-100: #FFD6D3;
+  --color-red-400: #FF6961;
+  --color-red-500: #FF3B30;
+  --color-red-600: #D70015;
+
+  --color-blue-400: #409CFF;
+  --color-blue-500: #0071E3;
+}
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
-  background: #F7F7F5;
-  color: #191919;
+  background: #F5F5F7;
+  color: #1D1D1F;
 }
 
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #E9E9E7; border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: #D4D4D0; }
+::-webkit-scrollbar-thumb { background: #D2D2D7; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #C7C7CC; }
 
-::selection { background: #FFF7ED; color: #C2410C; }
+::selection { background: #FFF4E5; color: #B5650A; }
 
-:focus-visible { outline: 2px solid #F97316; outline-offset: 2px; }
+:focus-visible { outline: 2px solid #FF9F0A; outline-offset: 2px; }
 
 /* datetime-local input color */
 input[type="datetime-local"] { color-scheme: light; }

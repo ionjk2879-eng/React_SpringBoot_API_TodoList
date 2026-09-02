@@ -27,7 +27,7 @@ export default function LoginPage({ onLogin }: Props) {
   }
 
   return (
-    <div className="min-h-screen bg-[#F7F7F5] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-[#F5F5F7] flex items-center justify-center p-4">
       <div className="w-full max-w-[360px]">
 
         {/* Logo */}
@@ -37,13 +37,13 @@ export default function LoginPage({ onLogin }: Props) {
               <path d="M2 4.5h12M2 8h12M2 11.5h7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
             </svg>
           </div>
-          <span className="text-base font-semibold text-[#191919]">Todo List</span>
+          <span className="text-base font-semibold text-[#1D1D1F]">Todo List</span>
         </div>
 
         {/* Card */}
-        <div className="bg-white border border-[#E9E9E7] rounded-2xl p-6 shadow-sm">
-          <h1 className="text-lg font-semibold text-[#191919] mb-0.5">로그인</h1>
-          <p className="text-sm text-[#787774] mb-5">계속하려면 로그인해 주세요</p>
+        <div className="bg-white border border-[#D2D2D7] rounded-2xl p-6 shadow-sm">
+          <h1 className="text-lg font-semibold text-[#1D1D1F] mb-0.5">로그인</h1>
+          <p className="text-sm text-[#86868B] mb-5">계속하려면 로그인해 주세요</p>
 
           {error && (
             <div className="flex items-start gap-2 bg-red-50 border border-red-100 text-red-600 text-xs px-3 py-2.5 rounded-lg mb-4">
@@ -57,7 +57,7 @@ export default function LoginPage({ onLogin }: Props) {
 
           <form onSubmit={handleSubmit} className="space-y-3">
             <div>
-              <label className="block text-[11px] font-medium text-[#787774] uppercase tracking-wide mb-1.5">
+              <label className="block text-[11px] font-medium text-[#86868B] uppercase tracking-wide mb-1.5">
                 이메일
               </label>
               <input
@@ -67,11 +67,11 @@ export default function LoginPage({ onLogin }: Props) {
                 onChange={e => setEmail(e.target.value)}
                 required
                 autoFocus
-                className="w-full text-sm text-[#191919] placeholder-[#C7C5C2] border border-[#E9E9E7] rounded-lg px-3 py-2.5 focus:outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-100 transition-colors"
+                className="w-full text-sm text-[#1D1D1F] placeholder-[#AEAEB2] border border-[#D2D2D7] rounded-lg px-3 py-2.5 focus:outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-100 transition-colors"
               />
             </div>
             <div>
-              <label className="block text-[11px] font-medium text-[#787774] uppercase tracking-wide mb-1.5">
+              <label className="block text-[11px] font-medium text-[#86868B] uppercase tracking-wide mb-1.5">
                 비밀번호
               </label>
               <input
@@ -80,7 +80,7 @@ export default function LoginPage({ onLogin }: Props) {
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 required
-                className="w-full text-sm text-[#191919] placeholder-[#C7C5C2] border border-[#E9E9E7] rounded-lg px-3 py-2.5 focus:outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-100 transition-colors"
+                className="w-full text-sm text-[#1D1D1F] placeholder-[#AEAEB2] border border-[#D2D2D7] rounded-lg px-3 py-2.5 focus:outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-100 transition-colors"
               />
             </div>
             <button
@@ -92,8 +92,8 @@ export default function LoginPage({ onLogin }: Props) {
             </button>
           </form>
 
-          <div className="mt-4 pt-4 border-t border-[#E9E9E7] text-center">
-            <span className="text-sm text-[#787774]">계정이 없으신가요? </span>
+          <div className="mt-4 pt-4 border-t border-[#D2D2D7] text-center">
+            <span className="text-sm text-[#86868B]">계정이 없으신가요? </span>
             <Link to="/register" className="text-sm font-medium text-orange-600 hover:text-orange-700 transition-colors">
               회원가입
             </Link>

@@ -8,6 +8,8 @@ interface Props {
   categoryId: number | null;
   hasCustomStamp: boolean;
   stampVersion?: number;
+  togglePending?: boolean;
+  deletePending?: boolean;
   onToggle: (id: number) => void;
   onEdit: (todo: Todo) => void;
   onDelete: (id: number) => void;
@@ -30,11 +32,12 @@ function formatDeadline(deadline: string): string {
   return d.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' }) + ' ' + time;
 }
 
-export default function TodoCard({ todo, stampShape, categoryId, hasCustomStamp, stampVersion = 0, onToggle, onEdit, onDelete }: Props) {
+export default function TodoCard({ todo, stampShape, categoryId, hasCustomStamp, stampVersion = 0, togglePending = false, deletePending = false, onToggle, onEdit, onDelete }: Props) {
   const approaching = isApproaching(todo);
   const [pressed, setPressed] = useState(false);
 
   function handleToggle() {
+    if (togglePending) return;
     setPressed(true);
     window.setTimeout(() => setPressed(false), 280);
     onToggle(todo.id);
@@ -47,30 +50,36 @@ export default function TodoCard({ todo, stampShape, categoryId, hasCustomStamp,
         e.dataTransfer.setData('text/plain', String(todo.id));
         e.dataTransfer.effectAllowed = 'move';
       }}
-      className={`group relative flex items-start gap-3 px-4 py-3 border-b border-[#E9E9E7] last:border-b-0 transition-colors cursor-grab active:cursor-grabbing overflow-hidden ${
-        approaching ? 'bg-orange-50/70' : 'hover:bg-[#FAFAF8]'
-      } ${pressed ? 'card-press' : ''}`}
+      className={`group relative flex items-start gap-3 px-4 py-3 border-b border-[#D2D2D7] last:border-b-0 transition-all cursor-grab active:cursor-grabbing overflow-hidden ${
+        approaching ? 'bg-orange-50/70' : 'hover:bg-[#FAFAFC]'
+      } ${pressed ? 'card-press' : ''} ${deletePending ? 'opacity-40 pointer-events-none' : ''}`}
     >
 
       {/* Stamp button */}
       <button
         onClick={handleToggle}
+        disabled={togglePending}
         aria-label={todo.completed ? '도장 취소' : '도장 찍기'}
-        className={`relative z-10 mt-0.5 flex-shrink-0 w-6 h-6 rounded-full border-2 transition-all flex items-center justify-center ${
+        aria-busy={togglePending}
+        className={`relative z-10 flex-shrink-0 w-8 h-8 -my-1 rounded-full border-2 transition-all flex items-center justify-center disabled:cursor-wait ${
           todo.completed
-            ? 'border-rose-700/70 text-rose-700/80'
+            ? 'border-green-700/70 text-green-700/80'
             : approaching
             ? 'border-orange-300 text-orange-200 hover:border-orange-400 hover:text-orange-400 hover:bg-orange-50'
-            : 'border-[#D4D4D0] text-[#E9E9E7] hover:border-[#A8A8A4] hover:text-[#C7C5C2] hover:bg-[#FAFAF8]'
+            : 'border-[#C7C7CC] text-[#D2D2D7] hover:border-[#98989D] hover:text-[#AEAEB2] hover:bg-[#FAFAFC]'
         }`}
       >
-        <CategoryStamp
-          categoryId={categoryId}
-          stampShape={stampShape}
-          hasCustomStamp={hasCustomStamp}
-          version={stampVersion}
-          className={`w-3.5 h-3.5 ${todo.completed ? 'stamp-mark -rotate-[9deg]' : ''}`}
-        />
+        {togglePending ? (
+          <span className="w-3.5 h-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" />
+        ) : (
+          <CategoryStamp
+            categoryId={categoryId}
+            stampShape={stampShape}
+            hasCustomStamp={hasCustomStamp}
+            version={stampVersion}
+            className={`w-4 h-4 ${todo.completed ? 'stamp-mark -rotate-[9deg]' : ''}`}
+          />
+        )}
       </button>
 
       {/* Content */}
@@ -84,26 +93,26 @@ export default function TodoCard({ todo, stampShape, categoryId, hasCustomStamp,
               stampShape={stampShape}
               hasCustomStamp={hasCustomStamp}
               version={stampVersion}
-              className="w-14 h-14 text-rose-700 -rotate-[11deg]"
+              className="w-14 h-14 text-green-700 -rotate-[11deg]"
             />
           </div>
         )}
 
         <div className="flex items-center gap-2 flex-wrap">
           <span className={`text-sm ${
-            todo.completed ? 'line-through text-[#C7C5C2]' : 'text-[#191919] font-medium'
+            todo.completed ? 'line-through text-[#AEAEB2]' : 'text-[#1D1D1F] font-medium'
           }`}>
             {todo.title}
           </span>
 
           {todo.categoryName && (
-            <span className="inline-flex items-center text-[11px] text-[#787774] bg-[#F0F0EE] px-1.5 py-0.5 rounded">
+            <span className="inline-flex items-center text-[11px] text-[#86868B] bg-[#ECECEF] px-1.5 py-0.5 rounded">
               {todo.categoryName}
             </span>
           )}
 
           {todo.completed && (
-            <span className="text-[11px] text-rose-700/80 font-medium">완료</span>
+            <span className="text-[11px] text-green-700/80 font-medium">완료</span>
           )}
 
           {approaching && (
@@ -118,7 +127,7 @@ export default function TodoCard({ todo, stampShape, categoryId, hasCustomStamp,
         </div>
 
         {todo.content && (
-          <p className="text-xs text-[#787774] mt-0.5 truncate">{todo.content}</p>
+          <p className="text-xs text-[#86868B] mt-0.5 truncate">{todo.content}</p>
         )}
 
         {todo.deadline && (
@@ -129,17 +138,17 @@ export default function TodoCard({ todo, stampShape, categoryId, hasCustomStamp,
               </span>
             </p>
           ) : (
-            <p className="text-xs mt-0.5 text-[#C7C5C2]">{formatDeadline(todo.deadline)}</p>
+            <p className="text-xs mt-0.5 text-[#AEAEB2]">{formatDeadline(todo.deadline)}</p>
           )
         )}
       </div>
 
       {/* Actions — collapsed to 0 width; hovering the row grows it, squeezing the content beside it */}
-      <div className="self-stretch flex items-center gap-0.5 flex-shrink-0 w-0 group-hover:w-[68px] overflow-hidden transition-[width] duration-200 ease-out bg-[#F0F0EE] rounded-md">
+      <div className="self-stretch flex items-center gap-0.5 flex-shrink-0 w-0 group-hover:w-[68px] overflow-hidden transition-[width] duration-200 ease-out bg-[#ECECEF] rounded-md">
         <button
           onClick={() => onEdit(todo)}
           aria-label="수정"
-          className="p-1.5 ml-1 rounded text-[#A8A8A4] hover:text-[#191919] hover:bg-white transition-colors flex-shrink-0"
+          className="p-1.5 ml-1 rounded text-[#98989D] hover:text-[#1D1D1F] hover:bg-white transition-colors flex-shrink-0"
         >
           <svg className="w-3.5 h-3.5" viewBox="0 0 14 14" fill="none">
             <path d="M9.5 2.5l2 2-7 7H2.5v-2l7-7z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
@@ -148,7 +157,7 @@ export default function TodoCard({ todo, stampShape, categoryId, hasCustomStamp,
         <button
           onClick={() => onDelete(todo.id)}
           aria-label="삭제"
-          className="p-1.5 rounded text-[#A8A8A4] hover:text-red-500 hover:bg-white transition-colors flex-shrink-0"
+          className="p-1.5 rounded text-[#98989D] hover:text-red-500 hover:bg-white transition-colors flex-shrink-0"
         >
           <svg className="w-3.5 h-3.5" viewBox="0 0 14 14" fill="none">
             <path d="M2 3.5h10M5 3.5V2.5h4v1M5.5 6v4M8.5 6v4M3 3.5l.5 7.5h7L11 3.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />

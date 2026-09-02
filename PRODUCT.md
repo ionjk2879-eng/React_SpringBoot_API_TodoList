@@ -42,13 +42,18 @@ React (Vite + TypeScript + Tailwind CSS + React Query) frontend, Spring Boot 3 (
 
 - 앱 이름: Todo List (변경 가능)
 - 라이트 모드 전용
-- 주색상: 주황색(orange)
-- 레퍼런스 무드: Notion — 미니멀, 정갈한 여백, 중립 배경, 강한 타이포그래피
+- 레퍼런스 무드: Apple macOS/iOS 시스템 UI — 절제된 뉴트럴 배경, 시스템 컬러, 부드러운 depth
+- 컨셉: 스터디플래너 도장(스탬프) — 완료 처리를 도장 찍는 인터랙션으로 표현, 카테고리별 커스텀 도장(프리셋 6종 또는 업로드 이미지) 지원
+- 색 전략: 60-30-10
+  - 60% 배경: `#F5F5F7` 캔버스, `#FFFFFF` 카드
+  - 30% 구조: `#1D1D1F` 텍스트, `#86868B` 보조텍스트, `#D2D2D7` 경계선
+  - 10% 포인트: 오렌지 `#FF9F0A` (행동/진행중), 그린 `#34C759` (완료/도장) — Tailwind `orange-*`/`green-*`/`red-*`/`blue-*` 스케일을 `frontend/src/index.css`의 `@theme`에서 macOS 시스템 컬러로 재정의해 전역 적용
+  - 달력 일/토, 삭제 버튼의 빨강/파랑은 브랜드색이 아니라 보편적 UI 관례로 별도 취급
 
 ## Evidence on Hand
 
 - 현재 구현된 React 프론트엔드: `frontend/src/`
-- 현재 UI 스크린샷 확인됨 (단조로운 흰 배경 + Tailwind 기본 파란색)
+- 도장 컨셉 + 애플 톤 팔레트 적용 완료 (2026-09-02)
 
 ## Product Principles
 

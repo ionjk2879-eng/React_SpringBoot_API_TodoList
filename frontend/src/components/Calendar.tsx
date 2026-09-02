@@ -18,7 +18,7 @@ function classifyTodo(todo: Todo): 'todo' | 'progress' | 'done' {
 }
 
 const CHIP: Record<string, string> = {
-  todo: 'bg-[#F0F0EE] text-[#787774]',
+  todo: 'bg-[#ECECEF] text-[#86868B]',
   progress: 'bg-orange-100 text-orange-700',
   done: 'bg-green-100 text-green-600 line-through',
 };
@@ -67,13 +67,13 @@ export default function Calendar({ todos, selectedDate, onDateSelect, onDropTodo
 
       {/* Header */}
       <div className="flex items-center justify-between mb-4 flex-shrink-0">
-        <h2 className="text-base font-semibold text-[#191919]">
+        <h2 className="text-base font-semibold text-[#1D1D1F]">
           {year}년 {month + 1}월
         </h2>
         <div className="flex items-center gap-0.5">
           <button
             onClick={() => setViewDate(new Date(year, month - 1, 1))}
-            className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-[#F0F0EE] text-[#787774] transition-colors"
+            className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-[#ECECEF] text-[#86868B] transition-colors"
           >
             <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none">
               <path d="M10 12L6 8l4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -81,13 +81,13 @@ export default function Calendar({ todos, selectedDate, onDateSelect, onDropTodo
           </button>
           <button
             onClick={() => setViewDate(new Date())}
-            className="text-xs text-[#787774] hover:text-[#191919] px-2 py-1 rounded-md hover:bg-[#F0F0EE] transition-colors"
+            className="text-xs text-[#86868B] hover:text-[#1D1D1F] px-2 py-1 rounded-md hover:bg-[#ECECEF] transition-colors"
           >
             오늘
           </button>
           <button
             onClick={() => setViewDate(new Date(year, month + 1, 1))}
-            className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-[#F0F0EE] text-[#787774] transition-colors"
+            className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-[#ECECEF] text-[#86868B] transition-colors"
           >
             <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none">
               <path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -102,7 +102,7 @@ export default function Calendar({ todos, selectedDate, onDateSelect, onDropTodo
           <div
             key={d}
             className={`text-center text-[10px] font-semibold py-1 ${
-              i === 0 ? 'text-red-400' : i === 6 ? 'text-blue-400' : 'text-[#C7C5C2]'
+              i === 0 ? 'text-red-400' : i === 6 ? 'text-blue-400' : 'text-[#AEAEB2]'
             }`}
           >
             {d}
@@ -111,9 +111,9 @@ export default function Calendar({ todos, selectedDate, onDateSelect, onDropTodo
       </div>
 
       {/* Grid */}
-      <div className="flex-1 grid grid-cols-7 gap-px bg-[#E9E9E7] rounded-xl overflow-hidden border border-[#E9E9E7]">
+      <div className="flex-1 grid grid-cols-7 gap-px bg-[#D2D2D7] rounded-xl overflow-hidden border border-[#D2D2D7]">
         {cells.map((day, i) => {
-          if (!day) return <div key={`b-${i}`} className="bg-[#FAFAF8]" />;
+          if (!day) return <div key={`b-${i}`} className="bg-[#FAFAFC]" />;
 
           const dateStr = fmt(day);
           const dayTodos = todosByDate[dateStr] ?? [];
@@ -138,7 +138,7 @@ export default function Calendar({ todos, selectedDate, onDateSelect, onDropTodo
               className={`p-1.5 cursor-pointer transition-colors min-h-[72px] ${
                 isSelected ? 'bg-orange-50 ring-2 ring-inset ring-orange-400' :
                 dragOverDate === dateStr ? 'bg-orange-50 ring-2 ring-inset ring-orange-300' :
-                'bg-white hover:bg-[#FAFAF8]'
+                'bg-white hover:bg-[#FAFAFC]'
               }`}
             >
               <span
@@ -146,7 +146,7 @@ export default function Calendar({ todos, selectedDate, onDateSelect, onDropTodo
                   isToday ? 'bg-orange-500 text-white' :
                   isSun ? 'text-red-400' :
                   isSat ? 'text-blue-500' :
-                  'text-[#787774]'
+                  'text-[#86868B]'
                 }`}
               >
                 {day}
@@ -162,7 +162,7 @@ export default function Calendar({ todos, selectedDate, onDateSelect, onDropTodo
                   </div>
                 ))}
                 {dayTodos.length > 2 && (
-                  <div className="text-[10px] text-[#C7C5C2] px-1">+{dayTodos.length - 2}</div>
+                  <div className="text-[10px] text-[#AEAEB2] px-1">+{dayTodos.length - 2}</div>
                 )}
               </div>
             </div>
