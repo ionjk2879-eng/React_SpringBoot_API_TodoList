@@ -29,31 +29,26 @@ jobs:
           chmod +x gradlew
           ./gradlew :backend:bootJar --no-daemon
 
-      - name: Stage JAR for SCP
-        run: cp backend/build/libs/backend-1.0-SNAPSHOT.jar backend-1.0-SNAPSHOT.jar
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/deploy.pem
+          chmod 600 ~/.ssh/deploy.pem
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
 
       - name: Copy JAR to EC2
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USERNAME }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          source: "backend-1.0-SNAPSHOT.jar"
-          target: "/home/ubuntu/app/"
+        run: scp -i ~/.ssh/deploy.pem backend/build/libs/backend-1.0-SNAPSHOT.jar ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:/home/ubuntu/app/backend-1.0-SNAPSHOT.jar
 
       - name: Pull frontend, build & restart on EC2
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USERNAME }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            set -e
-            cd ~/app
-            git pull origin main
-            cd frontend
-            npm install
-            npm run build
-            cd ..
-            sudo systemctl restart todoapp
-            echo "Deploy complete"
+        run: |
+          ssh -i ~/.ssh/deploy.pem ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} << 'EOF'
+          set -e
+          cd ~/app
+          git pull origin main
+          cd frontend
+          npm install
+          npm run build
+          cd ..
+          sudo systemctl restart todoapp
+          echo "Deploy complete"
+          EOF
