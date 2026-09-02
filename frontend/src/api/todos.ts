@@ -1,8 +1,8 @@
 import client from './client';
 import type { ApiResponse, Page, Todo, TodoRequest } from '../types';
 
-export async function getTodos(page: number, categoryId?: number): Promise<Page<Todo>> {
-  const params: Record<string, unknown> = { page, size: 10, sort: 'createdAt,desc' };
+export async function getTodos(page: number, categoryId?: number, size = 10): Promise<Page<Todo>> {
+  const params: Record<string, unknown> = { page, size, sort: 'createdAt,desc' };
   if (categoryId) params.categoryId = categoryId;
   const { data } = await client.get<ApiResponse<Page<Todo>>>('/todos', { params });
   return data.data;
