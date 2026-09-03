@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /* Apple system-color tuning: remaps Tailwind's default scales so every
-   existing orange-*/green-*/red-*/blue-* utility across the app renders
+   existing orange-N / green-N / red-N / blue-N utility across the app renders
    in the macOS/iOS system palette instead of Tailwind's defaults. */
 @theme {
   --color-orange-50: #FFF4E5;
