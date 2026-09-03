@@ -31,8 +31,15 @@ export interface Todo {
   completed: boolean;
   categoryId: number | null;
   categoryName: string | null;
+  recurrence: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface SubTask {
+  id: number;
+  title: string;
+  completed: boolean;
 }
 
 export interface Page<T> {
@@ -49,6 +56,7 @@ export interface TodoRequest {
   content?: string;
   deadline?: string;
   categoryId?: number | null;
+  recurrence?: string | null;
 }
 
 export interface LoginRequest {

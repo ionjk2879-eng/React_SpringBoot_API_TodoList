@@ -15,6 +15,7 @@ export default function TodoForm({ categories, initial, onSubmit, onClose }: Pro
     initial?.deadline ? initial.deadline.slice(0, 16) : ''
   );
   const [categoryId, setCategoryId] = useState<number | null>(initial?.categoryId ?? null);
+  const [recurrence, setRecurrence] = useState<string>(initial?.recurrence ?? '');
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -26,6 +27,7 @@ export default function TodoForm({ categories, initial, onSubmit, onClose }: Pro
         content: content || undefined,
         deadline: deadline ? (deadline.length === 16 ? deadline + ':00' : deadline) : undefined,
         categoryId: categoryId ?? null,
+        recurrence: recurrence || null,
       });
     } catch {
       // 상위 컴포넌트가 에러 메시지를 표시한다; 폼은 다시 시도할 수 있도록 열어둔다.
@@ -113,6 +115,24 @@ export default function TodoForm({ categories, initial, onSubmit, onClose }: Pro
                 ))}
               </select>
             </div>
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-medium text-[#86868B] uppercase tracking-wide mb-1.5">
+              반복
+            </label>
+            <select
+              value={recurrence}
+              onChange={e => setRecurrence(e.target.value)}
+              className="w-full text-sm text-[#1D1D1F] border border-[#D2D2D7] rounded-lg px-3 py-2 focus:outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-100 transition-colors bg-white"
+            >
+              <option value="">반복 안 함</option>
+              <option value="DAILY">매일</option>
+              <option value="WEEKLY">매주</option>
+            </select>
+            {recurrence && !deadline && (
+              <p className="text-[11px] text-orange-500 mt-1.5">반복하려면 마감일을 함께 입력하세요</p>
+            )}
           </div>
 
           <div className="flex gap-2 pt-1">

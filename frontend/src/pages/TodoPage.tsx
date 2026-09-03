@@ -12,6 +12,7 @@ import CategoryStamp from '../components/CategoryStamp';
 import ProfileAvatar from '../components/ProfileAvatar';
 import ImageCropModal from '../components/ImageCropModal';
 import ConfirmModal from '../components/ConfirmModal';
+import { useDeadlineReminders } from '../hooks/useDeadlineReminders';
 import type { Category, Todo, TodoRequest } from '../types';
 
 interface Props { email: string; onLogout: () => void; }
@@ -68,20 +69,22 @@ export default function TodoPage({ email, onLogout }: Props) {
   const [selectedCategory, setSelectedCategory] = useState<number | undefined>();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
   const [newCatName, setNewCatName] = useState('');
   const [newCatStamp, setNewCatStamp] = useState('circle');
   const [newCatImageBlob, setNewCatImageBlob] = useState<Blob | null>(null);
   const [newCatImagePreviewUrl, setNewCatImagePreviewUrl] = useState<string | null>(null);
-  const [showCalendar, setShowCalendar] = useState(false);
+  const [showCalendar, setShowCalendar] = useState(true);
+  const [showSidebar, setShowSidebar] = useState(true);
   const [sidebarView, setSidebarView] = useState<'categories' | 'settings'>('categories');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [editingCategoryId, setEditingCategoryId] = useState<number | null>(null);
   const [editingCategoryName, setEditingCategoryName] = useState('');
   const [editingCategoryStamp, setEditingCategoryStamp] = useState('circle');
   const [nicknameInput, setNicknameInput] = useState<string | null>(null);
-  const [newCatCustomizeOpen, setNewCatCustomizeOpen] = useState(false);
+  const [showCategoryForm, setShowCategoryForm] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<
     { kind: 'todo'; id: number } | { kind: 'category'; id: number; name: string } | null
   >(null);
@@ -91,6 +94,9 @@ export default function TodoPage({ email, onLogout }: Props) {
   const [cropImageUrl, setCropImageUrl] = useState<string | null>(null);
   const [avatarVersion, setAvatarVersion] = useState(0);
   const [stampVersions, setStampVersions] = useState<Record<number, number>>({});
+  const [notificationsEnabled, setNotificationsEnabled] = useState(
+    () => localStorage.getItem('notificationsEnabled') === 'true'
+  );
 
   function bumpStampVersion(id: number) {
     setStampVersions(v => ({ ...v, [id]: (v[id] ?? 0) + 1 }));
@@ -156,7 +162,7 @@ export default function TodoPage({ email, onLogout }: Props) {
       setNewCatStamp('circle');
       setNewCatImageBlob(null);
       setNewCatImagePreviewUrl(prev => { if (prev) URL.revokeObjectURL(prev); return null; });
-      setNewCatCustomizeOpen(false);
+      setShowCategoryForm(false);
     },
     onError: err => setErrorMsg(extractErrorMessage(err, '카테고리를 추가하지 못했습니다.')),
   });
@@ -263,6 +269,13 @@ export default function TodoPage({ email, onLogout }: Props) {
     });
   }
 
+  function closeCategoryForm() {
+    setShowCategoryForm(false);
+    setNewCatName('');
+    setNewCatStamp('circle');
+    clearNewCatImage();
+  }
+
   async function handleLogout() { await logout(); onLogout(); }
 
   function handleDropTodo(todoId: number, dateStr: string) {
@@ -282,17 +295,48 @@ export default function TodoPage({ email, onLogout }: Props) {
 
   const allTodos: Todo[] = todoPage?.content ?? [];
 
+  useDeadlineReminders(allTodos, notificationsEnabled);
+
+  async function toggleNotifications() {
+    if (notificationsEnabled) {
+      setNotificationsEnabled(false);
+      localStorage.setItem('notificationsEnabled', 'false');
+      return;
+    }
+    if (typeof Notification === 'undefined') {
+      setErrorMsg('이 브라우저는 알림을 지원하지 않습니다.');
+      return;
+    }
+    let permission = Notification.permission;
+    if (permission === 'default') {
+      permission = await Notification.requestPermission();
+    }
+    if (permission !== 'granted') {
+      setErrorMsg('브라우저 알림 권한이 꺼져 있습니다. 브라우저 설정에서 허용해주세요.');
+      return;
+    }
+    setNotificationsEnabled(true);
+    localStorage.setItem('notificationsEnabled', 'true');
+  }
+
   const counts = {
     todo: allTodos.filter(t => classifyTodo(t) === 'todo').length,
     progress: allTodos.filter(t => classifyTodo(t) === 'progress').length,
     done: allTodos.filter(t => classifyTodo(t) === 'done').length,
   };
 
-  const filteredTodos = selectedDate
+  const statusFilteredTodos = selectedDate
     ? allTodos.filter(t => t.deadline?.startsWith(selectedDate))
     : statusFilter === 'all'
     ? allTodos
     : allTodos.filter(t => classifyTodo(t) === statusFilter);
+
+  const trimmedQuery = searchQuery.trim().toLowerCase();
+  const filteredTodos = trimmedQuery
+    ? statusFilteredTodos.filter(t =>
+        t.title.toLowerCase().includes(trimmedQuery) || (t.content ?? '').toLowerCase().includes(trimmedQuery)
+      )
+    : statusFilteredTodos;
 
   const activeCategory = categories.find(c => c.id === selectedCategory);
 
@@ -307,6 +351,16 @@ export default function TodoPage({ email, onLogout }: Props) {
 
       {/* Header */}
       <header className="h-11 bg-white border-b border-[#D2D2D7] flex items-center px-4 gap-3 flex-shrink-0">
+        <button
+          onClick={() => setShowSidebar(v => !v)}
+          aria-label={showSidebar ? '사이드바 닫기' : '사이드바 열기'}
+          className="w-7 h-7 -ml-1 flex items-center justify-center rounded-md text-[#86868B] hover:bg-[#ECECEF] hover:text-[#1D1D1F] transition-colors flex-shrink-0"
+        >
+          <svg className="w-4 h-4" viewBox="0 0 14 14" fill="none">
+            <rect x="1.5" y="2.5" width="11" height="9" rx="1.5" stroke="currentColor" strokeWidth="1.2" />
+            <path d="M5.5 2.5v9" stroke="currentColor" strokeWidth="1.2" />
+          </svg>
+        </button>
         <div className="flex items-center gap-2">
           <div className="w-5 h-5 bg-orange-500 rounded flex items-center justify-center flex-shrink-0">
             <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none">
@@ -333,6 +387,8 @@ export default function TodoPage({ email, onLogout }: Props) {
       {/* Body */}
       <div className="flex flex-1 overflow-hidden">
 
+        {showSidebar && (
+        <>
         {/* Sidebar */}
         <aside className="w-52 flex-shrink-0 flex flex-col py-6 overflow-y-auto bg-[#FAFAFC]">
 
@@ -464,7 +520,7 @@ export default function TodoPage({ email, onLogout }: Props) {
                       <button
                         onClick={() => { setEditingCategoryId(cat.id); setEditingCategoryName(cat.name); setEditingCategoryStamp(cat.stampShape); }}
                         aria-label="카테고리 수정"
-                        className="opacity-0 group-hover/cat:opacity-100 w-5 h-5 flex items-center justify-center rounded text-[#AEAEB2] hover:text-[#86868B] hover:bg-[#ECECEF] transition-all flex-shrink-0"
+                        className="opacity-0 group-hover/cat:opacity-100 group-focus-within/cat:opacity-100 w-5 h-5 flex items-center justify-center rounded text-[#AEAEB2] hover:text-[#86868B] hover:bg-[#ECECEF] transition-all flex-shrink-0"
                       >
                         <svg className="w-3 h-3" viewBox="0 0 12 12" fill="none">
                           <path d="M8.5 1.5l2 2-6 6H2.5v-2l6-6z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
@@ -473,7 +529,7 @@ export default function TodoPage({ email, onLogout }: Props) {
                       <button
                         onClick={() => setConfirmDelete({ kind: 'category', id: cat.id, name: cat.name })}
                         aria-label="카테고리 삭제"
-                        className="opacity-0 group-hover/cat:opacity-100 mr-1 w-5 h-5 flex items-center justify-center rounded text-[#AEAEB2] hover:text-red-400 hover:bg-red-50 transition-all flex-shrink-0"
+                        className="opacity-0 group-hover/cat:opacity-100 group-focus-within/cat:opacity-100 mr-1 w-5 h-5 flex items-center justify-center rounded text-[#AEAEB2] hover:text-red-400 hover:bg-red-50 transition-all flex-shrink-0"
                       >
                         <svg className="w-3 h-3" viewBox="0 0 12 12" fill="none">
                           <path d="M2 2l8 8M10 2L2 10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
@@ -483,65 +539,16 @@ export default function TodoPage({ email, onLogout }: Props) {
                   )
                 ))}
 
-                <div className="border border-[#D2D2D7] rounded-lg px-2.5 py-1.5 mt-1 space-y-1.5 bg-white focus-within:border-orange-300 focus-within:ring-1 focus-within:ring-orange-100 transition-all">
-                  <div className="flex items-center gap-1.5">
-                    <svg className="w-3 h-3 text-[#AEAEB2] flex-shrink-0" viewBox="0 0 12 12" fill="none">
-                      <path d="M6 1.5v9M1.5 6h9" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-                    </svg>
-                    <input
-                      type="text"
-                      placeholder="새 카테고리"
-                      value={newCatName}
-                      onChange={e => setNewCatName(e.target.value)}
-                      onKeyDown={e => e.key === 'Enter' && newCatName.trim() && createCatMutation.mutate()}
-                      className="flex-1 text-xs text-[#1D1D1F] placeholder-[#AEAEB2] bg-transparent outline-none min-w-0"
-                    />
-                    {newCatName.trim() && (
-                      <button onClick={() => createCatMutation.mutate()} className="text-xs text-orange-500 hover:text-orange-600 font-medium transition-colors flex-shrink-0">
-                        추가
-                      </button>
-                    )}
-                  </div>
-                  {newCatName.trim() && (
-                    newCatImagePreviewUrl ? (
-                      <div className="flex items-center gap-2 px-0.5">
-                        <img src={newCatImagePreviewUrl} className="w-6 h-6 rounded-full object-cover flex-shrink-0" alt="" />
-                        <button
-                          type="button"
-                          onClick={clearNewCatImage}
-                          className="text-xs text-[#86868B] hover:text-red-500 transition-colors"
-                        >
-                          이미지 제거
-                        </button>
-                      </div>
-                    ) : newCatCustomizeOpen ? (
-                      <div className="flex items-center gap-2 flex-wrap px-0.5">
-                        <StampPicker value={newCatStamp} onChange={setNewCatStamp} />
-                        <label className="text-[11px] text-orange-600 hover:text-orange-700 font-medium cursor-pointer whitespace-nowrap transition-colors">
-                          이미지로 만들기
-                          <input
-                            type="file"
-                            accept="image/png,image/jpeg,image/webp"
-                            className="hidden"
-                            onChange={e => {
-                              const file = e.target.files?.[0];
-                              e.target.value = '';
-                              openCrop({ kind: 'newCategory' }, file);
-                            }}
-                          />
-                        </label>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => setNewCatCustomizeOpen(true)}
-                        className="text-[11px] text-[#86868B] hover:text-[#1D1D1F] px-0.5 transition-colors"
-                      >
-                        도장 모양 커스터마이즈
-                      </button>
-                    )
-                  )}
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowCategoryForm(true)}
+                  className="w-full flex items-center gap-2 text-sm px-2.5 py-1.5 mt-1 rounded-md text-orange-600 hover:bg-orange-50 transition-colors"
+                >
+                  <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 14 14" fill="none">
+                    <path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                  </svg>
+                  새 카테고리
+                </button>
               </div>
             )}
 
@@ -577,6 +584,8 @@ export default function TodoPage({ email, onLogout }: Props) {
 
         {/* Divider */}
         <div className="w-px bg-[#D2D2D7] flex-shrink-0" />
+        </>
+        )}
 
         {/* Main — split 50/50, or full-width Settings */}
         <div className="flex-1 flex overflow-hidden min-h-0">
@@ -673,12 +682,36 @@ export default function TodoPage({ email, onLogout }: Props) {
                 <label className="block text-xs font-medium text-[#86868B] uppercase tracking-wide mb-1.5">이메일</label>
                 <p className="text-sm text-[#1D1D1F]">{email}</p>
               </div>
+
+              <div className="border-t border-[#D2D2D7]" />
+
+              {/* Deadline reminders */}
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm text-[#1D1D1F] font-medium">마감 알림</p>
+                  <p className="text-xs text-[#86868B] mt-0.5">마감 24시간 전 브라우저 알림을 보내드려요</p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={notificationsEnabled}
+                  onClick={toggleNotifications}
+                  className={`relative flex-shrink-0 w-10 h-6 rounded-full transition-colors ${
+                    notificationsEnabled ? 'bg-orange-500' : 'bg-[#D2D2D7]'
+                  }`}
+                >
+                  <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                    notificationsEnabled ? 'translate-x-4' : ''
+                  }`} />
+                </button>
+              </div>
             </div>
           </div>
           ) : (
           <>
           {/* Left: Todo list */}
           <div className="flex-1 overflow-y-auto px-6 py-6 min-w-0">
+            <div className="max-w-2xl mx-auto">
 
             {errorMsg && (
               <div className="flex items-start gap-2 bg-red-50 border border-red-100 text-red-600 text-xs px-3 py-2.5 rounded-lg mb-4">
@@ -705,15 +738,52 @@ export default function TodoPage({ email, onLogout }: Props) {
                   해야 할 일 {counts.todo}개 · 마감임박 {counts.progress}개 · 완료 {counts.done}개
                 </p>
               </div>
-              <button
-                onClick={() => setShowForm(true)}
-                className="flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium px-3.5 py-2 rounded-lg transition-colors flex-shrink-0"
-              >
-                <svg className="w-3.5 h-3.5" viewBox="0 0 14 14" fill="none">
-                  <path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-                </svg>
-                새 할 일
-              </button>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <button
+                  onClick={() => setShowCategoryForm(true)}
+                  className="flex items-center gap-1.5 border border-[#D2D2D7] hover:bg-[#F5F5F7] text-[#1D1D1F] text-sm font-medium px-3.5 py-2 rounded-lg transition-colors"
+                >
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 14 14" fill="none">
+                    <path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                  </svg>
+                  새 카테고리
+                </button>
+                <button
+                  onClick={() => setShowForm(true)}
+                  className="flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium px-3.5 py-2 rounded-lg transition-colors"
+                >
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 14 14" fill="none">
+                    <path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                  </svg>
+                  새 할 일
+                </button>
+              </div>
+            </div>
+
+            {/* Search */}
+            <div className="relative mb-4">
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#AEAEB2]" viewBox="0 0 14 14" fill="none">
+                <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.2" />
+                <path d="M9.5 9.5L12.5 12.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+              </svg>
+              <input
+                type="text"
+                placeholder="할 일 검색"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="w-full text-sm text-[#1D1D1F] placeholder-[#AEAEB2] border border-[#D2D2D7] rounded-lg pl-9 pr-8 py-2 focus:outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-100 transition-colors bg-white"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  aria-label="검색어 지우기"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#AEAEB2] hover:text-[#86868B] transition-colors"
+                >
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 14 14" fill="none">
+                    <path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                  </svg>
+                </button>
+              )}
             </div>
 
             {/* Status cards */}
@@ -784,13 +854,15 @@ export default function TodoPage({ email, onLogout }: Props) {
                   </svg>
                 </div>
                 <p className="text-sm font-medium text-[#86868B]">
-                  {selectedDate ? '해당 날짜의 할 일이 없습니다' :
+                  {trimmedQuery ? `"${searchQuery}" 검색 결과가 없습니다` :
+                   selectedDate ? '해당 날짜의 할 일이 없습니다' :
                    statusFilter === 'todo' ? '해야 할 일이 없습니다' :
                    statusFilter === 'progress' ? '마감임박 할 일이 없습니다' :
                    statusFilter === 'done' ? '완료된 항목이 없습니다' : '할 일이 없습니다'}
                 </p>
                 <p className="text-xs text-[#AEAEB2] mt-1">
-                  {selectedDate ? '달력에서 다른 날짜를 선택하거나 클릭해서 해제하세요' : '위 버튼으로 추가해보세요'}
+                  {trimmedQuery ? '다른 검색어로 시도해보세요' :
+                   selectedDate ? '달력에서 다른 날짜를 선택하거나 클릭해서 해제하세요' : '위 버튼으로 추가해보세요'}
                 </p>
               </div>
             ) : (
@@ -816,6 +888,7 @@ export default function TodoPage({ email, onLogout }: Props) {
                 ))}
               </div>
             )}
+            </div>
           </div>
 
           {showCalendar && (
@@ -866,6 +939,112 @@ export default function TodoPage({ email, onLogout }: Props) {
           onConfirm={handleCropConfirm}
           onCancel={closeCrop}
         />
+      )}
+      {showCategoryForm && (
+        <div
+          className="fixed inset-0 bg-black/20 backdrop-blur-[2px] flex items-center justify-center z-50 p-4"
+          onClick={e => { if (e.target === e.currentTarget) closeCategoryForm(); }}
+        >
+          <div className="bg-white rounded-xl shadow-2xl shadow-black/10 w-full max-w-sm">
+
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-[#D2D2D7]">
+              <h2 className="text-sm font-semibold text-[#1D1D1F]">새 카테고리</h2>
+              <button
+                onClick={closeCategoryForm}
+                className="w-6 h-6 flex items-center justify-center rounded text-[#AEAEB2] hover:text-[#86868B] hover:bg-[#ECECEF] transition-colors"
+              >
+                <svg className="w-3.5 h-3.5" viewBox="0 0 14 14" fill="none">
+                  <path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Form */}
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="block text-[11px] font-medium text-[#86868B] uppercase tracking-wide mb-1.5">
+                  이름 <span className="text-orange-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="카테고리 이름을 입력하세요"
+                  value={newCatName}
+                  autoFocus
+                  onChange={e => setNewCatName(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && newCatName.trim() && createCatMutation.mutate()}
+                  className="w-full text-sm text-[#1D1D1F] placeholder-[#AEAEB2] border border-[#D2D2D7] rounded-lg px-3 py-2 focus:outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-100 transition-colors"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-medium text-[#86868B] uppercase tracking-wide mb-1.5">
+                  도장
+                </label>
+                {newCatImagePreviewUrl ? (
+                  <div className="flex items-center gap-2">
+                    <img src={newCatImagePreviewUrl} className="w-9 h-9 rounded-full object-cover flex-shrink-0" alt="" />
+                    <button
+                      type="button"
+                      onClick={clearNewCatImage}
+                      className="text-xs text-[#86868B] hover:text-red-500 transition-colors"
+                    >
+                      이미지 제거
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {STAMP_SHAPES.map(s => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => setNewCatStamp(s.id)}
+                        aria-label={s.label}
+                        title={s.label}
+                        className={`w-9 h-9 flex items-center justify-center rounded-lg border transition-colors ${
+                          newCatStamp === s.id ? 'border-orange-400 bg-orange-50 text-orange-600' : 'border-[#D2D2D7] text-[#98989D] hover:border-[#C7C7CC] hover:text-[#86868B]'
+                        }`}
+                      >
+                        <StampIcon shape={s.id} className="w-4 h-4" />
+                      </button>
+                    ))}
+                    <label className="text-xs text-orange-600 hover:text-orange-700 font-medium cursor-pointer whitespace-nowrap transition-colors ml-1">
+                      이미지로 만들기
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp"
+                        className="hidden"
+                        onChange={e => {
+                          const file = e.target.files?.[0];
+                          e.target.value = '';
+                          openCrop({ kind: 'newCategory' }, file);
+                        }}
+                      />
+                    </label>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={closeCategoryForm}
+                  className="flex-1 text-sm text-[#86868B] border border-[#D2D2D7] py-2 rounded-lg hover:bg-[#F5F5F7] transition-colors"
+                >
+                  취소
+                </button>
+                <button
+                  type="button"
+                  disabled={!newCatName.trim() || createCatMutation.isPending}
+                  onClick={() => createCatMutation.mutate()}
+                  className="flex-1 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium py-2 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  {createCatMutation.isPending ? '추가 중…' : '추가하기'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
       {showForm && (
         <TodoForm

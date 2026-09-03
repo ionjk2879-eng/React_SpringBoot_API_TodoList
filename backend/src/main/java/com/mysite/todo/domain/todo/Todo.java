@@ -39,6 +39,9 @@ public class Todo {
     @Column(nullable = false)
     private boolean completed = false;
 
+    @Column(length = 20)
+    private String recurrence;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id")
     private Category category;

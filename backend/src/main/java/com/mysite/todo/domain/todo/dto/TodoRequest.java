@@ -15,4 +15,6 @@ public class TodoRequest {
     private LocalDateTime deadline;
 
     private Long categoryId;
+
+    private String recurrence;
 }
