@@ -10,4 +10,5 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
     List<Category> findByUserOrderByCreatedAtAsc(User user);
     Optional<Category> findByIdAndUser(Long id, User user);
     boolean existsByIdAndUser(Long id, User user);
+    long deleteByUser(User user);
 }

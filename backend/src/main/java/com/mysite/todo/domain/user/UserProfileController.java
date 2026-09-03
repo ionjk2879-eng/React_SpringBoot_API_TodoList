@@ -1,6 +1,8 @@
 package com.mysite.todo.domain.user;
 
 import com.mysite.todo.common.ApiResponse;
+import com.mysite.todo.domain.user.dto.ChangePasswordRequest;
+import com.mysite.todo.domain.user.dto.DeleteAccountRequest;
 import com.mysite.todo.domain.user.dto.UpdateNicknameRequest;
 import com.mysite.todo.domain.user.dto.UserProfileResponse;
 import jakarta.validation.Valid;
@@ -55,5 +57,21 @@ public class UserProfileController {
             @AuthenticationPrincipal UserDetails userDetails) {
         return ResponseEntity.ok(ApiResponse.ok(
                 userProfileService.deleteProfileImage(userDetails.getUsername()), "프로필 이미지 삭제 성공"));
+    }
+
+    @PutMapping("/password")
+    public ResponseEntity<ApiResponse<Void>> changePassword(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @Valid @RequestBody ChangePasswordRequest req) {
+        userProfileService.changePassword(userDetails.getUsername(), req);
+        return ResponseEntity.ok(ApiResponse.ok(null, "비밀번호 변경 성공"));
+    }
+
+    @DeleteMapping
+    public ResponseEntity<ApiResponse<Void>> deleteAccount(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @Valid @RequestBody DeleteAccountRequest req) {
+        userProfileService.deleteAccount(userDetails.getUsername(), req);
+        return ResponseEntity.ok(ApiResponse.ok(null, "계정 삭제 성공"));
     }
 }

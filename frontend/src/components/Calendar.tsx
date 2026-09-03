@@ -128,7 +128,10 @@ export default function Calendar({ todos, selectedDate, onDateSelect, onDropTodo
               onClick={() => onDateSelect(isSelected ? null : dateStr)}
               onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }}
               onDragEnter={() => setDragOverDate(dateStr)}
-              onDragLeave={() => setDragOverDate(d => (d === dateStr ? null : d))}
+              onDragLeave={e => {
+                if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+                setDragOverDate(d => (d === dateStr ? null : d));
+              }}
               onDrop={e => {
                 e.preventDefault();
                 setDragOverDate(null);

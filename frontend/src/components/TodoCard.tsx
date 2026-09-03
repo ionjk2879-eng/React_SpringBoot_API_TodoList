@@ -54,6 +54,19 @@ export default function TodoCard({ todo, stampShape, categoryId, hasCustomStamp,
         onDragStart={e => {
           e.dataTransfer.setData('text/plain', String(todo.id));
           e.dataTransfer.effectAllowed = 'move';
+
+          // Native drag preview snapshots the whole (wide) card, which then covers
+          // the drop target underneath. Swap in a small compact chip instead.
+          const ghost = document.createElement('div');
+          ghost.textContent = todo.title;
+          ghost.style.cssText =
+            'position:absolute; top:-1000px; left:-1000px; max-width:180px; padding:6px 10px;' +
+            'background:#1D1D1F; color:#fff; font-size:12px; font-weight:500; border-radius:8px;' +
+            'white-space:nowrap; overflow:hidden; text-overflow:ellipsis;' +
+            'font-family:-apple-system,BlinkMacSystemFont,sans-serif;';
+          document.body.appendChild(ghost);
+          e.dataTransfer.setDragImage(ghost, 14, 14);
+          window.setTimeout(() => document.body.removeChild(ghost), 0);
         }}
         className={`group relative flex items-start gap-3 px-4 py-3 transition-all cursor-grab active:cursor-grabbing overflow-hidden ${
           approaching ? 'bg-orange-50/70' : 'hover:bg-[#FAFAFC]'

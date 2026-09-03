@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getTodos, createTodo, updateTodo, toggleTodo, deleteTodo } from '../api/todos';
 import { getCategories, createCategory, updateCategory, deleteCategory, uploadStampImage, deleteStampImage } from '../api/categories';
-import { getProfile, updateNickname, uploadProfileImage, deleteProfileImage } from '../api/users';
+import { getProfile, updateNickname, uploadProfileImage, deleteProfileImage, changePassword, deleteAccount } from '../api/users';
 import { logout } from '../api/auth';
 import TodoCard from '../components/TodoCard';
 import TodoForm from '../components/TodoForm';
@@ -70,14 +70,19 @@ export default function TodoPage({ email, onLogout }: Props) {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [dragOverCategoryId, setDragOverCategoryId] = useState<number | 'none' | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
   const [newCatName, setNewCatName] = useState('');
   const [newCatStamp, setNewCatStamp] = useState('circle');
   const [newCatImageBlob, setNewCatImageBlob] = useState<Blob | null>(null);
   const [newCatImagePreviewUrl, setNewCatImagePreviewUrl] = useState<string | null>(null);
-  const [showCalendar, setShowCalendar] = useState(true);
-  const [showSidebar, setShowSidebar] = useState(true);
+  const [showCalendar, setShowCalendar] = useState(
+    () => localStorage.getItem('showCalendar') !== 'false'
+  );
+  const [showSidebar, setShowSidebar] = useState(
+    () => localStorage.getItem('showSidebar') !== 'false'
+  );
   const [sidebarView, setSidebarView] = useState<'categories' | 'settings'>('categories');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [editingCategoryId, setEditingCategoryId] = useState<number | null>(null);
@@ -97,6 +102,15 @@ export default function TodoPage({ email, onLogout }: Props) {
   const [notificationsEnabled, setNotificationsEnabled] = useState(
     () => localStorage.getItem('notificationsEnabled') === 'true'
   );
+  const [reminderLeadHours, setReminderLeadHours] = useState(
+    () => Number(localStorage.getItem('reminderLeadHours')) || 24
+  );
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [newPasswordConfirm, setNewPasswordConfirm] = useState('');
+  const [passwordSuccessMsg, setPasswordSuccessMsg] = useState<string | null>(null);
+  const [showDeleteAccount, setShowDeleteAccount] = useState(false);
+  const [deleteAccountPassword, setDeleteAccountPassword] = useState('');
 
   function bumpStampVersion(id: number) {
     setStampVersions(v => ({ ...v, [id]: (v[id] ?? 0) + 1 }));
@@ -234,6 +248,36 @@ export default function TodoPage({ email, onLogout }: Props) {
     onError: err => setErrorMsg(extractErrorMessage(err, '프로필 이미지를 삭제하지 못했습니다.')),
   });
 
+  const changePasswordMutation = useMutation({
+    mutationFn: () => changePassword(currentPassword, newPassword),
+    onSuccess: () => {
+      setCurrentPassword('');
+      setNewPassword('');
+      setNewPasswordConfirm('');
+      setPasswordSuccessMsg('비밀번호가 변경되었습니다.');
+    },
+    onError: err => setErrorMsg(extractErrorMessage(err, '비밀번호를 변경하지 못했습니다.')),
+  });
+
+  const deleteAccountMutation = useMutation({
+    mutationFn: () => deleteAccount(deleteAccountPassword),
+    onSuccess: () => { onLogout(); },
+    onError: err => setErrorMsg(extractErrorMessage(err, '계정을 삭제하지 못했습니다.')),
+  });
+
+  function handleChangePassword() {
+    setPasswordSuccessMsg(null);
+    if (newPassword.length < 8) {
+      setErrorMsg('새 비밀번호는 8자 이상이어야 합니다.');
+      return;
+    }
+    if (newPassword !== newPasswordConfirm) {
+      setErrorMsg('새 비밀번호가 일치하지 않습니다.');
+      return;
+    }
+    changePasswordMutation.mutate();
+  }
+
   function openCrop(context: { kind: 'profile' } | { kind: 'category'; categoryId: number } | { kind: 'newCategory' }, file: File | undefined) {
     if (!file) return;
     setCropContext(context);
@@ -276,6 +320,22 @@ export default function TodoPage({ email, onLogout }: Props) {
     clearNewCatImage();
   }
 
+  function toggleSidebar() {
+    setShowSidebar(v => {
+      const next = !v;
+      localStorage.setItem('showSidebar', String(next));
+      return next;
+    });
+  }
+
+  function toggleCalendar() {
+    setShowCalendar(v => {
+      const next = !v;
+      localStorage.setItem('showCalendar', String(next));
+      return next;
+    });
+  }
+
   async function handleLogout() { await logout(); onLogout(); }
 
   function handleDropTodo(todoId: number, dateStr: string) {
@@ -289,13 +349,34 @@ export default function TodoPage({ email, onLogout }: Props) {
         content: todo.content ?? undefined,
         deadline: `${dateStr}T${time}`,
         categoryId: todo.categoryId,
+        recurrence: todo.recurrence,
+      },
+    });
+  }
+
+  function handleDropTodoOnCategory(todoId: number, categoryId: number | null) {
+    const todo = allTodos.find(t => t.id === todoId);
+    if (!todo || todo.categoryId === categoryId) return;
+    updateMutation.mutate({
+      id: todoId,
+      req: {
+        title: todo.title,
+        content: todo.content ?? undefined,
+        deadline: todo.deadline ?? undefined,
+        categoryId,
+        recurrence: todo.recurrence,
       },
     });
   }
 
   const allTodos: Todo[] = todoPage?.content ?? [];
 
-  useDeadlineReminders(allTodos, notificationsEnabled);
+  useDeadlineReminders(allTodos, notificationsEnabled, reminderLeadHours);
+
+  function handleReminderLeadHoursChange(hours: number) {
+    setReminderLeadHours(hours);
+    localStorage.setItem('reminderLeadHours', String(hours));
+  }
 
   async function toggleNotifications() {
     if (notificationsEnabled) {
@@ -352,7 +433,7 @@ export default function TodoPage({ email, onLogout }: Props) {
       {/* Header */}
       <header className="h-11 bg-white border-b border-[#D2D2D7] flex items-center px-4 gap-3 flex-shrink-0">
         <button
-          onClick={() => setShowSidebar(v => !v)}
+          onClick={toggleSidebar}
           aria-label={showSidebar ? '사이드바 닫기' : '사이드바 열기'}
           className="w-7 h-7 -ml-1 flex items-center justify-center rounded-md text-[#86868B] hover:bg-[#ECECEF] hover:text-[#1D1D1F] transition-colors flex-shrink-0"
         >
@@ -371,7 +452,7 @@ export default function TodoPage({ email, onLogout }: Props) {
         </div>
         <div className="flex-1" />
         <button
-          onClick={() => setShowCalendar(v => !v)}
+          onClick={toggleCalendar}
           className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-md transition-colors ${
             showCalendar ? 'text-orange-600 bg-orange-50' : 'text-[#86868B] hover:bg-[#ECECEF] hover:text-[#1D1D1F]'
           }`}
@@ -427,7 +508,20 @@ export default function TodoPage({ email, onLogout }: Props) {
               <div className="pl-1 pt-0.5 space-y-0.5">
                 <button
                   onClick={() => { setSelectedCategory(undefined); setStatusFilter('all'); setSelectedDate(null); }}
+                  onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }}
+                  onDragEnter={() => setDragOverCategoryId('none')}
+                  onDragLeave={e => {
+                    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+                    setDragOverCategoryId(v => (v === 'none' ? null : v));
+                  }}
+                  onDrop={e => {
+                    e.preventDefault();
+                    setDragOverCategoryId(null);
+                    const todoId = Number(e.dataTransfer.getData('text/plain'));
+                    if (todoId) handleDropTodoOnCategory(todoId, null);
+                  }}
                   className={`w-full flex items-center gap-2 text-sm px-2.5 py-1.5 rounded-md transition-colors ${
+                    dragOverCategoryId === 'none' ? 'bg-orange-50 ring-1 ring-inset ring-orange-300' :
                     !selectedCategory ? 'text-orange-700 font-medium' : 'text-[#86868B] hover:bg-[#ECECEF] hover:text-[#1D1D1F]'
                   }`}
                 >
@@ -509,7 +603,20 @@ export default function TodoPage({ email, onLogout }: Props) {
                     <div key={cat.id} className="group/cat flex items-center">
                       <button
                         onClick={() => { setSelectedCategory(cat.id); setStatusFilter('all'); setSelectedDate(null); }}
+                        onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }}
+                        onDragEnter={() => setDragOverCategoryId(cat.id)}
+                        onDragLeave={e => {
+                          if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+                          setDragOverCategoryId(v => (v === cat.id ? null : v));
+                        }}
+                        onDrop={e => {
+                          e.preventDefault();
+                          setDragOverCategoryId(null);
+                          const todoId = Number(e.dataTransfer.getData('text/plain'));
+                          if (todoId) handleDropTodoOnCategory(todoId, cat.id);
+                        }}
                         className={`flex-1 flex items-center gap-2 text-sm px-2.5 py-1.5 rounded-md transition-colors min-w-0 ${
+                          dragOverCategoryId === cat.id ? 'bg-orange-50 ring-1 ring-inset ring-orange-300' :
                           selectedCategory === cat.id ? 'text-orange-700 font-medium' : 'text-[#86868B] hover:bg-[#ECECEF] hover:text-[#1D1D1F]'
                         }`}
                       >
@@ -691,25 +798,133 @@ export default function TodoPage({ email, onLogout }: Props) {
               <div className="border-t border-[#D2D2D7]" />
 
               {/* Deadline reminders */}
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm text-[#1D1D1F] font-medium">마감 알림</p>
-                  <p className="text-xs text-[#86868B] mt-0.5">마감 24시간 전 브라우저 알림을 보내드려요</p>
+              <div>
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm text-[#1D1D1F] font-medium">마감 알림</p>
+                    <p className="text-xs text-[#86868B] mt-0.5">마감 전 브라우저 알림을 보내드려요</p>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={notificationsEnabled}
+                    onClick={toggleNotifications}
+                    className={`relative flex-shrink-0 w-10 h-6 rounded-full transition-colors ${
+                      notificationsEnabled ? 'bg-orange-500' : 'bg-[#D2D2D7]'
+                    }`}
+                  >
+                    <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                      notificationsEnabled ? 'translate-x-4' : ''
+                    }`} />
+                  </button>
                 </div>
+                {notificationsEnabled && (
+                  <div className="mt-3">
+                    <label className="block text-xs font-medium text-[#86868B] uppercase tracking-wide mb-1.5">
+                      알림 시점
+                    </label>
+                    <select
+                      value={reminderLeadHours}
+                      onChange={e => handleReminderLeadHoursChange(Number(e.target.value))}
+                      className="w-full text-sm text-[#1D1D1F] border border-[#D2D2D7] rounded-lg px-3 py-2 outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-100 transition-colors bg-white"
+                    >
+                      <option value={1}>1시간 전</option>
+                      <option value={3}>3시간 전</option>
+                      <option value={6}>6시간 전</option>
+                      <option value={12}>12시간 전</option>
+                      <option value={24}>24시간 전</option>
+                      <option value={72}>3일 전</option>
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              <div className="border-t border-[#D2D2D7]" />
+
+              {/* Change password */}
+              <div>
+                <label className="block text-xs font-medium text-[#86868B] uppercase tracking-wide mb-1.5">
+                  비밀번호 변경
+                </label>
+                <div className="space-y-2">
+                  <input
+                    type="password"
+                    placeholder="현재 비밀번호"
+                    value={currentPassword}
+                    onChange={e => setCurrentPassword(e.target.value)}
+                    className="w-full text-sm text-[#1D1D1F] placeholder-[#AEAEB2] border border-[#D2D2D7] rounded-lg px-3 py-2 outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-100 transition-colors"
+                  />
+                  <input
+                    type="password"
+                    placeholder="새 비밀번호 (8자 이상)"
+                    value={newPassword}
+                    onChange={e => setNewPassword(e.target.value)}
+                    className="w-full text-sm text-[#1D1D1F] placeholder-[#AEAEB2] border border-[#D2D2D7] rounded-lg px-3 py-2 outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-100 transition-colors"
+                  />
+                  <input
+                    type="password"
+                    placeholder="새 비밀번호 확인"
+                    value={newPasswordConfirm}
+                    onChange={e => setNewPasswordConfirm(e.target.value)}
+                    className="w-full text-sm text-[#1D1D1F] placeholder-[#AEAEB2] border border-[#D2D2D7] rounded-lg px-3 py-2 outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-100 transition-colors"
+                  />
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={!currentPassword || !newPassword || changePasswordMutation.isPending}
+                      onClick={handleChangePassword}
+                      className="text-sm text-orange-600 hover:text-orange-700 font-medium px-3 py-2 rounded-lg hover:bg-orange-50 transition-colors disabled:opacity-50"
+                    >
+                      {changePasswordMutation.isPending ? '변경 중…' : '비밀번호 변경'}
+                    </button>
+                    {passwordSuccessMsg && (
+                      <span className="text-xs text-green-700">{passwordSuccessMsg}</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Danger zone */}
+            <div className="max-w-md bg-white border border-red-200 rounded-xl p-6 mt-4 shadow-sm shadow-black/[0.03]">
+              <p className="text-sm text-[#1D1D1F] font-medium">계정 삭제</p>
+              <p className="text-xs text-[#86868B] mt-0.5">모든 할 일, 카테고리, 프로필 정보가 영구적으로 삭제됩니다. 되돌릴 수 없습니다.</p>
+              {!showDeleteAccount ? (
                 <button
                   type="button"
-                  role="switch"
-                  aria-checked={notificationsEnabled}
-                  onClick={toggleNotifications}
-                  className={`relative flex-shrink-0 w-10 h-6 rounded-full transition-colors ${
-                    notificationsEnabled ? 'bg-orange-500' : 'bg-[#D2D2D7]'
-                  }`}
+                  onClick={() => setShowDeleteAccount(true)}
+                  className="mt-3 text-sm text-red-600 hover:text-red-700 font-medium px-3 py-2 rounded-lg hover:bg-red-50 transition-colors"
                 >
-                  <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
-                    notificationsEnabled ? 'translate-x-4' : ''
-                  }`} />
+                  계정 삭제
                 </button>
-              </div>
+              ) : (
+                <div className="mt-3 space-y-2">
+                  <input
+                    type="password"
+                    placeholder="비밀번호를 입력하세요"
+                    value={deleteAccountPassword}
+                    onChange={e => setDeleteAccountPassword(e.target.value)}
+                    className="w-full text-sm text-[#1D1D1F] placeholder-[#AEAEB2] border border-[#D2D2D7] rounded-lg px-3 py-2 outline-none focus:border-red-300 focus:ring-2 focus:ring-red-100 transition-colors"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => { setShowDeleteAccount(false); setDeleteAccountPassword(''); }}
+                      className="flex-1 text-sm text-[#86868B] border border-[#D2D2D7] py-2 rounded-lg hover:bg-[#F5F5F7] transition-colors"
+                    >
+                      취소
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!deleteAccountPassword || deleteAccountMutation.isPending}
+                      onClick={() => deleteAccountMutation.mutate()}
+                      className="flex-1 text-sm font-medium py-2 rounded-lg text-white bg-red-500 hover:bg-red-600 transition-colors disabled:opacity-50"
+                    >
+                      {deleteAccountMutation.isPending ? '삭제 중…' : '정말 삭제하기'}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
           ) : (

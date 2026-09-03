@@ -85,7 +85,7 @@ public class TodoService {
         todo.setTitle(req.getTitle());
         todo.setContent(req.getContent());
         todo.setDeadline(req.getDeadline());
-        todo.setRecurrence(ALLOWED_RECURRENCE.contains(req.getRecurrence()) ? req.getRecurrence() : null);
+        todo.setRecurrence(req.getRecurrence() != null && ALLOWED_RECURRENCE.contains(req.getRecurrence()) ? req.getRecurrence() : null);
         if (req.getCategoryId() != null) {
             Category category = categoryRepository.findByIdAndUser(req.getCategoryId(), user)
                     .orElseThrow(() -> new IllegalArgumentException("카테고리를 찾을 수 없습니다."));

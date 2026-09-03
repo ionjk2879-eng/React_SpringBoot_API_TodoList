@@ -14,4 +14,6 @@ public interface SubTaskRepository extends JpaRepository<SubTask, Long> {
     Optional<SubTask> findByIdAndTodo_User(Long id, User user);
 
     long deleteByTodo(Todo todo);
+
+    long deleteByTodo_User(User user);
 }

@@ -18,6 +18,8 @@ public interface TodoRepository extends JpaRepository<Todo, Long> {
 
     Optional<Todo> findByIdAndUser(Long id, User user);
 
+    long deleteByUser(User user);
+
     @Modifying
     @Query("UPDATE Todo t SET t.category = null WHERE t.category.id = :categoryId AND t.user = :user")
     void detachCategory(@Param("categoryId") Long categoryId, @Param("user") User user);

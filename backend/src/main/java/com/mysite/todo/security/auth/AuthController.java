@@ -45,12 +45,15 @@ public class AuthController {
     }
 
     @PostMapping("/refresh")
-    public ResponseEntity<ApiResponse<TokenResponse>> refresh(HttpServletRequest request) {
+    public ResponseEntity<ApiResponse<TokenResponse>> refresh(
+            HttpServletRequest request,
+            HttpServletResponse response) {
         String refreshToken = extractRefreshCookie(request);
         if (refreshToken == null) {
             return ResponseEntity.status(401).body(ApiResponse.error("Refresh Token이 없습니다."));
         }
         TokenResponse tokens = authService.refresh(refreshToken);
+        setRefreshCookie(response, authService.getRefreshTokenForUser(tokens.getEmail()));
         return ResponseEntity.ok(ApiResponse.ok(tokens));
     }
 

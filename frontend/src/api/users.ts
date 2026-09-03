@@ -22,3 +22,11 @@ export async function deleteProfileImage(): Promise<UserProfile> {
   const { data } = await client.delete<ApiResponse<UserProfile>>('/users/me/profile-image');
   return data.data;
 }
+
+export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
+  await client.put('/users/me/password', { currentPassword, newPassword });
+}
+
+export async function deleteAccount(password: string): Promise<void> {
+  await client.delete('/users/me', { data: { password } });
+}
