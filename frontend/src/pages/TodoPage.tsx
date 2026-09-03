@@ -436,51 +436,55 @@ export default function TodoPage({ email, onLogout }: Props) {
                 </button>
                 {categories.map(cat => (
                   editingCategoryId === cat.id ? (
-                    <div key={cat.id} className="px-1 py-1.5 space-y-1.5 bg-[#FAFAFC] rounded-md">
-                      <input
-                        type="text"
-                        autoFocus
-                        value={editingCategoryName}
-                        onChange={e => setEditingCategoryName(e.target.value)}
-                        onKeyDown={e => e.key === 'Escape' && setEditingCategoryId(null)}
-                        className="w-full text-sm text-[#1D1D1F] border border-orange-300 rounded-md px-2 py-1 outline-none ring-1 ring-orange-100 min-w-0"
-                      />
-                      <StampPicker value={editingCategoryStamp} onChange={setEditingCategoryStamp} />
-                      <div className="flex items-center gap-2 px-0.5">
-                        {editingCategoryStamp === 'custom' && cat.hasCustomStamp ? (
-                          <>
-                            <CategoryStamp
-                              categoryId={cat.id}
-                              stampShape={cat.stampShape}
-                              hasCustomStamp={cat.hasCustomStamp}
-                              version={stampVersions[cat.id] ?? 0}
-                              className="w-6 h-6 text-green-700"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => deleteStampMutation.mutate(cat.id)}
-                              className="text-xs text-[#86868B] hover:text-red-500 transition-colors"
-                            >
-                              이미지 삭제
-                            </button>
-                          </>
-                        ) : (
-                          <label className="text-xs text-orange-600 hover:text-orange-700 font-medium cursor-pointer transition-colors">
-                            이미지로 내 도장 만들기
-                            <input
-                              type="file"
-                              accept="image/png,image/jpeg,image/webp"
-                              className="hidden"
-                              onChange={e => {
-                                const file = e.target.files?.[0];
-                                e.target.value = '';
-                                openCrop({ kind: 'category', categoryId: cat.id }, file);
-                              }}
-                            />
-                          </label>
-                        )}
+                    <div key={cat.id} className="border border-orange-200 rounded-lg bg-white shadow-sm overflow-hidden">
+                      <div className="p-2.5 space-y-2">
+                        <input
+                          type="text"
+                          autoFocus
+                          value={editingCategoryName}
+                          onChange={e => setEditingCategoryName(e.target.value)}
+                          onKeyDown={e => e.key === 'Escape' && setEditingCategoryId(null)}
+                          className="w-full text-sm text-[#1D1D1F] border border-[#D2D2D7] rounded-md px-2.5 py-1.5 outline-none focus:border-orange-300 focus:ring-1 focus:ring-orange-100 transition-colors min-w-0"
+                        />
+                        <div className="space-y-1.5">
+                          <StampPicker value={editingCategoryStamp} onChange={setEditingCategoryStamp} />
+                          <div className="flex items-center gap-2">
+                            {editingCategoryStamp === 'custom' && cat.hasCustomStamp ? (
+                              <>
+                                <CategoryStamp
+                                  categoryId={cat.id}
+                                  stampShape={cat.stampShape}
+                                  hasCustomStamp={cat.hasCustomStamp}
+                                  version={stampVersions[cat.id] ?? 0}
+                                  className="w-6 h-6 text-green-700"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => deleteStampMutation.mutate(cat.id)}
+                                  className="text-xs text-[#86868B] hover:text-red-500 transition-colors"
+                                >
+                                  이미지 삭제
+                                </button>
+                              </>
+                            ) : (
+                              <label className="text-xs text-orange-600 hover:text-orange-700 font-medium cursor-pointer transition-colors">
+                                이미지로 내 도장 만들기
+                                <input
+                                  type="file"
+                                  accept="image/png,image/jpeg,image/webp"
+                                  className="hidden"
+                                  onChange={e => {
+                                    const file = e.target.files?.[0];
+                                    e.target.value = '';
+                                    openCrop({ kind: 'category', categoryId: cat.id }, file);
+                                  }}
+                                />
+                              </label>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex gap-1 px-0.5">
+                      <div className="flex border-t border-[#F0F0F5]">
                         <button
                           disabled={renameCatMutation.isPending}
                           onClick={() => {
@@ -488,13 +492,14 @@ export default function TodoPage({ email, onLogout }: Props) {
                               renameCatMutation.mutate({ id: cat.id, name: editingCategoryName.trim(), stampShape: editingCategoryStamp });
                             }
                           }}
-                          className="flex-1 text-xs text-orange-600 hover:text-orange-700 font-medium py-1 rounded-md hover:bg-orange-50 transition-colors disabled:opacity-50"
+                          className="flex-1 text-xs text-orange-600 hover:text-orange-700 font-medium py-2 hover:bg-orange-50 transition-colors disabled:opacity-50"
                         >
                           {renameCatMutation.isPending ? '저장 중…' : '저장'}
                         </button>
+                        <div className="w-px bg-[#F0F0F5]" />
                         <button
                           onClick={() => setEditingCategoryId(null)}
-                          className="flex-1 text-xs text-[#86868B] hover:text-[#1D1D1F] py-1 rounded-md hover:bg-[#ECECEF] transition-colors"
+                          className="flex-1 text-xs text-[#86868B] hover:text-[#1D1D1F] py-2 hover:bg-[#FAFAFC] transition-colors"
                         >
                           취소
                         </button>
