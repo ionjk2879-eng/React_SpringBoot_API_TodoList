@@ -8,15 +8,27 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 public interface TodoRepository extends JpaRepository<Todo, Long> {
 
-    Page<Todo> findByUser(User user, Pageable pageable);
+    Page<Todo> findByUserAndDeletedAtIsNull(User user, Pageable pageable);
 
-    Page<Todo> findByUserAndCategoryId(User user, Long categoryId, Pageable pageable);
+    Page<Todo> findByUserAndCategoryIdAndDeletedAtIsNull(User user, Long categoryId, Pageable pageable);
 
-    Optional<Todo> findByIdAndUser(Long id, User user);
+    long countByUserAndCategoryIdAndDeletedAtIsNull(User user, Long categoryId);
+
+    List<Todo> findByUserAndDeletedAtIsNotNullOrderByDeletedAtDesc(User user);
+
+    Optional<Todo> findByIdAndUserAndDeletedAtIsNull(Long id, User user);
+
+    Optional<Todo> findByIdAndUserAndDeletedAtIsNotNull(Long id, User user);
+
+    List<Todo> findByUserAndCompletedTrueAndCompletedAtBefore(User user, LocalDateTime cutoff);
+
+    List<Todo> findByDeletedAtBefore(LocalDateTime cutoff);
 
     long deleteByUser(User user);
 

@@ -3,6 +3,7 @@ package com.mysite.todo.domain.category;
 import com.mysite.todo.common.ApiResponse;
 import com.mysite.todo.domain.category.dto.CategoryRequest;
 import com.mysite.todo.domain.category.dto.CategoryResponse;
+import com.mysite.todo.domain.category.dto.ReorderCategoriesRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
@@ -48,6 +49,28 @@ public class CategoryController {
             @PathVariable Long id) {
         categoryService.delete(userDetails.getUsername(), id);
         return ResponseEntity.ok(ApiResponse.ok(null, "삭제 성공"));
+    }
+
+    @PatchMapping("/{id}/pin")
+    public ResponseEntity<ApiResponse<CategoryResponse>> togglePin(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.ok(categoryService.togglePin(userDetails.getUsername(), id)));
+    }
+
+    @PatchMapping("/{id}/archive")
+    public ResponseEntity<ApiResponse<CategoryResponse>> toggleArchive(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.ok(categoryService.toggleArchive(userDetails.getUsername(), id)));
+    }
+
+    @PutMapping("/reorder")
+    public ResponseEntity<ApiResponse<Void>> reorder(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @Valid @RequestBody ReorderCategoriesRequest req) {
+        categoryService.reorder(userDetails.getUsername(), req);
+        return ResponseEntity.ok(ApiResponse.ok(null, "순서 변경 성공"));
     }
 
     @PostMapping("/{id}/stamp-image")

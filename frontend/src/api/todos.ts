@@ -26,3 +26,17 @@ export async function toggleTodo(id: number): Promise<Todo> {
 export async function deleteTodo(id: number): Promise<void> {
   await client.delete(`/todos/${id}`);
 }
+
+export async function getTrash(): Promise<Todo[]> {
+  const { data } = await client.get<ApiResponse<Todo[]>>('/todos/trash');
+  return data.data;
+}
+
+export async function restoreTodo(id: number): Promise<Todo> {
+  const { data } = await client.post<ApiResponse<Todo>>(`/todos/${id}/restore`);
+  return data.data;
+}
+
+export async function permanentlyDeleteTodo(id: number): Promise<void> {
+  await client.delete(`/todos/${id}/permanent`);
+}

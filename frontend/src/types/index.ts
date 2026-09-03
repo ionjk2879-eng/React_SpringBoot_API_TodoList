@@ -13,6 +13,8 @@ export interface UserProfile {
   email: string;
   nickname: string | null;
   hasProfileImage: boolean;
+  autoCleanupDays: number | null;
+  createdAt: string;
 }
 
 export interface Category {
@@ -20,6 +22,10 @@ export interface Category {
   name: string;
   stampShape: string;
   hasCustomStamp: boolean;
+  color: string | null;
+  pinned: boolean;
+  archived: boolean;
+  todoCount: number;
   createdAt: string;
 }
 
@@ -32,6 +38,9 @@ export interface Todo {
   categoryId: number | null;
   categoryName: string | null;
   recurrence: string | null;
+  recurrenceUntil: string | null;
+  completedAt: string | null;
+  deletedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -57,6 +66,7 @@ export interface TodoRequest {
   deadline?: string;
   categoryId?: number | null;
   recurrence?: string | null;
+  recurrenceUntil?: string | null;
 }
 
 export interface LoginRequest {

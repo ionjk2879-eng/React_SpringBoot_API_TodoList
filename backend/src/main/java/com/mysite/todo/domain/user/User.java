@@ -37,6 +37,8 @@ public class User {
     @Column(name = "refresh_token", length = 512)
     private String refreshToken;
 
+    private Integer autoCleanupDays;
+
     @CreatedDate
     @Column(updatable = false)
     private LocalDateTime createdAt;

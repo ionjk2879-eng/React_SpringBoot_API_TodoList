@@ -2,6 +2,7 @@ package com.mysite.todo.domain.category;
 
 import com.mysite.todo.domain.category.dto.CategoryRequest;
 import com.mysite.todo.domain.category.dto.CategoryResponse;
+import com.mysite.todo.domain.category.dto.ReorderCategoriesRequest;
 import com.mysite.todo.domain.todo.TodoRepository;
 import com.mysite.todo.domain.user.User;
 import com.mysite.todo.domain.user.UserRepository;
@@ -21,6 +22,8 @@ public class CategoryService {
 
     private static final Set<String> ALLOWED_STAMP_SHAPES =
             Set.of("circle", "star", "heart", "check", "square", "wave", "custom");
+    private static final Set<String> ALLOWED_COLORS =
+            Set.of("orange", "green", "blue", "red", "purple", "pink", "teal");
     private static final Set<String> ALLOWED_IMAGE_TYPES =
             Set.of("image/png", "image/jpeg", "image/webp");
     private static final long MAX_IMAGE_BYTES = 800_000;
@@ -33,10 +36,15 @@ public class CategoryService {
         return (requested != null && ALLOWED_STAMP_SHAPES.contains(requested)) ? requested : "circle";
     }
 
+    private String resolveColor(String requested) {
+        return (requested != null && ALLOWED_COLORS.contains(requested)) ? requested : null;
+    }
+
     public List<CategoryResponse> getAll(String email) {
         User user = getUser(email);
-        return categoryRepository.findByUserOrderByCreatedAtAsc(user)
-                .stream().map(CategoryResponse::new).toList();
+        return categoryRepository.findAllOrdered(user).stream()
+                .map(c -> toResponse(user, c))
+                .toList();
     }
 
     @Transactional
@@ -45,25 +53,60 @@ public class CategoryService {
         Category category = new Category();
         category.setName(req.getName());
         category.setStampShape(resolveStampShape(req.getStampShape()));
+        category.setColor(resolveColor(req.getColor()));
+        category.setSortOrder((int) categoryRepository.countByUser(user));
         category.setUser(user);
-        return new CategoryResponse(categoryRepository.save(category));
+        return toResponse(user, categoryRepository.save(category));
     }
 
     @Transactional
     public CategoryResponse update(String email, Long id, CategoryRequest req) {
         User user = getUser(email);
-        Category category = categoryRepository.findByIdAndUser(id, user)
-                .orElseThrow(() -> new IllegalArgumentException("카테고리를 찾을 수 없습니다."));
+        Category category = getOwned(id, user);
         category.setName(req.getName());
         category.setStampShape(resolveStampShape(req.getStampShape()));
-        return new CategoryResponse(categoryRepository.save(category));
+        category.setColor(resolveColor(req.getColor()));
+        return toResponse(user, categoryRepository.save(category));
+    }
+
+    @Transactional
+    public CategoryResponse togglePin(String email, Long id) {
+        User user = getUser(email);
+        Category category = getOwned(id, user);
+        category.setPinned(!category.isPinned());
+        return toResponse(user, categoryRepository.save(category));
+    }
+
+    @Transactional
+    public CategoryResponse toggleArchive(String email, Long id) {
+        User user = getUser(email);
+        Category category = getOwned(id, user);
+        category.setArchived(!category.isArchived());
+        return toResponse(user, categoryRepository.save(category));
+    }
+
+    @Transactional
+    public void reorder(String email, ReorderCategoriesRequest req) {
+        User user = getUser(email);
+        List<Category> owned = categoryRepository.findAllById(req.getOrderedIds()).stream()
+                .filter(c -> c.getUser().getId().equals(user.getId()))
+                .toList();
+        int order = 0;
+        for (Long id : req.getOrderedIds()) {
+            for (Category c : owned) {
+                if (c.getId().equals(id)) {
+                    c.setSortOrder(order++);
+                    break;
+                }
+            }
+        }
+        categoryRepository.saveAll(owned);
     }
 
     @Transactional
     public CategoryResponse uploadStampImage(String email, Long id, MultipartFile file) {
         User user = getUser(email);
-        Category category = categoryRepository.findByIdAndUser(id, user)
-                .orElseThrow(() -> new IllegalArgumentException("카테고리를 찾을 수 없습니다."));
+        Category category = getOwned(id, user);
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("업로드할 이미지가 없습니다.");
         }
@@ -80,13 +123,12 @@ public class CategoryService {
         }
         category.setStampImageType(file.getContentType());
         category.setStampShape("custom");
-        return new CategoryResponse(categoryRepository.save(category));
+        return toResponse(user, categoryRepository.save(category));
     }
 
     public Category getStampImageOwned(String email, Long id) {
         User user = getUser(email);
-        Category category = categoryRepository.findByIdAndUser(id, user)
-                .orElseThrow(() -> new IllegalArgumentException("카테고리를 찾을 수 없습니다."));
+        Category category = getOwned(id, user);
         if (category.getStampImageData() == null) {
             throw new IllegalArgumentException("커스텀 도장 이미지가 없습니다.");
         }
@@ -96,12 +138,11 @@ public class CategoryService {
     @Transactional
     public CategoryResponse deleteStampImage(String email, Long id) {
         User user = getUser(email);
-        Category category = categoryRepository.findByIdAndUser(id, user)
-                .orElseThrow(() -> new IllegalArgumentException("카테고리를 찾을 수 없습니다."));
+        Category category = getOwned(id, user);
         category.setStampImageData(null);
         category.setStampImageType(null);
         category.setStampShape("circle");
-        return new CategoryResponse(categoryRepository.save(category));
+        return toResponse(user, categoryRepository.save(category));
     }
 
     @Transactional
@@ -112,6 +153,16 @@ public class CategoryService {
         }
         todoRepository.detachCategory(id, user);
         categoryRepository.deleteById(id);
+    }
+
+    private CategoryResponse toResponse(User user, Category category) {
+        long todoCount = todoRepository.countByUserAndCategoryIdAndDeletedAtIsNull(user, category.getId());
+        return new CategoryResponse(category, todoCount);
+    }
+
+    private Category getOwned(Long id, User user) {
+        return categoryRepository.findByIdAndUser(id, user)
+                .orElseThrow(() -> new IllegalArgumentException("카테고리를 찾을 수 없습니다."));
     }
 
     private User getUser(String email) {

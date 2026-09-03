@@ -17,4 +17,6 @@ public class TodoRequest {
     private Long categoryId;
 
     private String recurrence;
+
+    private LocalDateTime recurrenceUntil;
 }

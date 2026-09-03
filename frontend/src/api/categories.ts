@@ -6,13 +6,13 @@ export async function getCategories(): Promise<Category[]> {
   return data.data;
 }
 
-export async function createCategory(name: string, stampShape = 'circle'): Promise<Category> {
-  const { data } = await client.post<ApiResponse<Category>>('/categories', { name, stampShape });
+export async function createCategory(name: string, stampShape = 'circle', color: string | null = null): Promise<Category> {
+  const { data } = await client.post<ApiResponse<Category>>('/categories', { name, stampShape, color });
   return data.data;
 }
 
-export async function updateCategory(id: number, name: string, stampShape = 'circle'): Promise<Category> {
-  const { data } = await client.put<ApiResponse<Category>>(`/categories/${id}`, { name, stampShape });
+export async function updateCategory(id: number, name: string, stampShape = 'circle', color: string | null = null): Promise<Category> {
+  const { data } = await client.put<ApiResponse<Category>>(`/categories/${id}`, { name, stampShape, color });
   return data.data;
 }
 
@@ -30,4 +30,18 @@ export async function uploadStampImage(id: number, blob: Blob): Promise<Category
 export async function deleteStampImage(id: number): Promise<Category> {
   const { data } = await client.delete<ApiResponse<Category>>(`/categories/${id}/stamp-image`);
   return data.data;
+}
+
+export async function togglePinCategory(id: number): Promise<Category> {
+  const { data } = await client.patch<ApiResponse<Category>>(`/categories/${id}/pin`);
+  return data.data;
+}
+
+export async function toggleArchiveCategory(id: number): Promise<Category> {
+  const { data } = await client.patch<ApiResponse<Category>>(`/categories/${id}/archive`);
+  return data.data;
+}
+
+export async function reorderCategories(orderedIds: number[]): Promise<void> {
+  await client.put('/categories/reorder', { orderedIds });
 }

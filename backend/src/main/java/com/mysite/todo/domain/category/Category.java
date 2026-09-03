@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.ColumnDefault;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
@@ -36,6 +37,21 @@ public class Category {
 
     @Column(length = 50)
     private String stampImageType;
+
+    @Column(length = 20)
+    private String color;
+
+    @ColumnDefault("0")
+    @Column(nullable = false)
+    private Integer sortOrder = 0;
+
+    @ColumnDefault("false")
+    @Column(nullable = false)
+    private boolean pinned = false;
+
+    @ColumnDefault("false")
+    @Column(nullable = false)
+    private boolean archived = false;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)

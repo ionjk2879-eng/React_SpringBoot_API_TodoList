@@ -5,6 +5,7 @@ import com.mysite.todo.domain.subtask.SubTaskRepository;
 import com.mysite.todo.domain.todo.TodoRepository;
 import com.mysite.todo.domain.user.dto.ChangePasswordRequest;
 import com.mysite.todo.domain.user.dto.DeleteAccountRequest;
+import com.mysite.todo.domain.user.dto.UpdateAutoCleanupRequest;
 import com.mysite.todo.domain.user.dto.UpdateNicknameRequest;
 import com.mysite.todo.domain.user.dto.UserProfileResponse;
 import lombok.RequiredArgsConstructor;
@@ -89,6 +90,14 @@ public class UserProfileService {
         }
         user.setPassword(passwordEncoder.encode(req.getNewPassword()));
         userRepository.save(user);
+    }
+
+    @Transactional
+    public UserProfileResponse updateAutoCleanup(String email, UpdateAutoCleanupRequest req) {
+        User user = getUser(email);
+        Integer days = req.getDays();
+        user.setAutoCleanupDays(days != null && days > 0 ? days : null);
+        return new UserProfileResponse(userRepository.save(user));
     }
 
     @Transactional

@@ -39,8 +39,14 @@ public class Todo {
     @Column(nullable = false)
     private boolean completed = false;
 
+    private LocalDateTime completedAt;
+
+    private LocalDateTime deletedAt;
+
     @Column(length = 20)
     private String recurrence;
+
+    private LocalDateTime recurrenceUntil;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id")

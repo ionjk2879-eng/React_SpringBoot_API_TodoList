@@ -3,6 +3,7 @@ package com.mysite.todo.domain.user;
 import com.mysite.todo.common.ApiResponse;
 import com.mysite.todo.domain.user.dto.ChangePasswordRequest;
 import com.mysite.todo.domain.user.dto.DeleteAccountRequest;
+import com.mysite.todo.domain.user.dto.UpdateAutoCleanupRequest;
 import com.mysite.todo.domain.user.dto.UpdateNicknameRequest;
 import com.mysite.todo.domain.user.dto.UserProfileResponse;
 import jakarta.validation.Valid;
@@ -65,6 +66,14 @@ public class UserProfileController {
             @Valid @RequestBody ChangePasswordRequest req) {
         userProfileService.changePassword(userDetails.getUsername(), req);
         return ResponseEntity.ok(ApiResponse.ok(null, "비밀번호 변경 성공"));
+    }
+
+    @PutMapping("/auto-cleanup")
+    public ResponseEntity<ApiResponse<UserProfileResponse>> updateAutoCleanup(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestBody UpdateAutoCleanupRequest req) {
+        return ResponseEntity.ok(ApiResponse.ok(
+                userProfileService.updateAutoCleanup(userDetails.getUsername(), req), "자동 정리 설정 변경 성공"));
     }
 
     @DeleteMapping

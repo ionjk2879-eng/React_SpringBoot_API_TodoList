@@ -14,6 +14,8 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Set;
 
 @Service
@@ -30,9 +32,15 @@ public class TodoService {
     public Page<TodoResponse> getAll(String email, Long categoryId, Pageable pageable) {
         User user = getUser(email);
         Page<Todo> page = (categoryId != null)
-                ? todoRepository.findByUserAndCategoryId(user, categoryId, pageable)
-                : todoRepository.findByUser(user, pageable);
+                ? todoRepository.findByUserAndCategoryIdAndDeletedAtIsNull(user, categoryId, pageable)
+                : todoRepository.findByUserAndDeletedAtIsNull(user, pageable);
         return page.map(TodoResponse::new);
+    }
+
+    public List<TodoResponse> getTrash(String email) {
+        User user = getUser(email);
+        return todoRepository.findByUserAndDeletedAtIsNotNullOrderByDeletedAtDesc(user)
+                .stream().map(TodoResponse::new).toList();
     }
 
     @Transactional
@@ -58,25 +66,50 @@ public class TodoService {
         Todo todo = getTodo(id, user);
         boolean completing = !todo.isCompleted();
         todo.setCompleted(completing);
+        todo.setCompletedAt(completing ? LocalDateTime.now() : null);
         TodoResponse response = new TodoResponse(todoRepository.save(todo));
 
         if (completing && todo.getRecurrence() != null && todo.getDeadline() != null) {
-            Todo next = new Todo();
-            next.setUser(user);
-            next.setTitle(todo.getTitle());
-            next.setContent(todo.getContent());
-            next.setCategory(todo.getCategory());
-            next.setRecurrence(todo.getRecurrence());
-            next.setDeadline(todo.getDeadline().plusDays("WEEKLY".equals(todo.getRecurrence()) ? 7 : 1));
-            todoRepository.save(next);
+            LocalDateTime nextDeadline = todo.getDeadline().plusDays("WEEKLY".equals(todo.getRecurrence()) ? 7 : 1);
+            LocalDateTime until = todo.getRecurrenceUntil();
+            if (until == null || !nextDeadline.isAfter(until)) {
+                Todo next = new Todo();
+                next.setUser(user);
+                next.setTitle(todo.getTitle());
+                next.setContent(todo.getContent());
+                next.setCategory(todo.getCategory());
+                next.setRecurrence(todo.getRecurrence());
+                next.setRecurrenceUntil(until);
+                next.setDeadline(nextDeadline);
+                todoRepository.save(next);
+            }
         }
         return response;
     }
 
+    /** Soft delete: moves the todo to trash. Subtasks stay attached so restore brings them back. */
     @Transactional
     public void delete(String email, Long id) {
         User user = getUser(email);
         Todo todo = getTodo(id, user);
+        todo.setDeletedAt(LocalDateTime.now());
+        todoRepository.save(todo);
+    }
+
+    @Transactional
+    public TodoResponse restore(String email, Long id) {
+        User user = getUser(email);
+        Todo todo = todoRepository.findByIdAndUserAndDeletedAtIsNotNull(id, user)
+                .orElseThrow(() -> new IllegalArgumentException("휴지통에서 Todo를 찾을 수 없습니다."));
+        todo.setDeletedAt(null);
+        return new TodoResponse(todoRepository.save(todo));
+    }
+
+    @Transactional
+    public void permanentlyDelete(String email, Long id) {
+        User user = getUser(email);
+        Todo todo = todoRepository.findByIdAndUserAndDeletedAtIsNotNull(id, user)
+                .orElseThrow(() -> new IllegalArgumentException("휴지통에서 Todo를 찾을 수 없습니다."));
         subTaskRepository.deleteByTodo(todo);
         todoRepository.delete(todo);
     }
@@ -85,7 +118,9 @@ public class TodoService {
         todo.setTitle(req.getTitle());
         todo.setContent(req.getContent());
         todo.setDeadline(req.getDeadline());
-        todo.setRecurrence(req.getRecurrence() != null && ALLOWED_RECURRENCE.contains(req.getRecurrence()) ? req.getRecurrence() : null);
+        boolean hasRecurrence = req.getRecurrence() != null && ALLOWED_RECURRENCE.contains(req.getRecurrence());
+        todo.setRecurrence(hasRecurrence ? req.getRecurrence() : null);
+        todo.setRecurrenceUntil(hasRecurrence ? req.getRecurrenceUntil() : null);
         if (req.getCategoryId() != null) {
             Category category = categoryRepository.findByIdAndUser(req.getCategoryId(), user)
                     .orElseThrow(() -> new IllegalArgumentException("카테고리를 찾을 수 없습니다."));
@@ -101,7 +136,7 @@ public class TodoService {
     }
 
     private Todo getTodo(Long id, User user) {
-        return todoRepository.findByIdAndUser(id, user)
+        return todoRepository.findByIdAndUserAndDeletedAtIsNull(id, user)
                 .orElseThrow(() -> new IllegalArgumentException("Todo를 찾을 수 없습니다."));
     }
 }

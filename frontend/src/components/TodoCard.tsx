@@ -22,6 +22,11 @@ function isApproaching(todo: Todo): boolean {
   return diff > 0 && diff <= 24 * 60 * 60 * 1000;
 }
 
+function isOverdue(todo: Todo): boolean {
+  if (!todo.deadline || todo.completed) return false;
+  return new Date(todo.deadline).getTime() - Date.now() < 0;
+}
+
 function formatDeadline(deadline: string): string {
   const d = new Date(deadline);
   const now = new Date();
@@ -37,6 +42,7 @@ const RECURRENCE_LABEL: Record<string, string> = { DAILY: '매일', WEEKLY: '매
 
 export default function TodoCard({ todo, stampShape, categoryId, hasCustomStamp, stampVersion = 0, togglePending = false, deletePending = false, onToggle, onEdit, onDelete }: Props) {
   const approaching = isApproaching(todo);
+  const overdue = isOverdue(todo);
   const [pressed, setPressed] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
@@ -69,7 +75,7 @@ export default function TodoCard({ todo, stampShape, categoryId, hasCustomStamp,
           window.setTimeout(() => document.body.removeChild(ghost), 0);
         }}
         className={`group relative flex items-start gap-3 px-4 py-3 transition-all cursor-grab active:cursor-grabbing overflow-hidden ${
-          approaching ? 'bg-orange-50/70' : 'hover:bg-[#FAFAFC]'
+          overdue ? 'bg-red-50/70' : approaching ? 'bg-orange-50/70' : 'hover:bg-[#FAFAFC]'
         } ${pressed ? 'card-press' : ''} ${deletePending ? 'opacity-40 pointer-events-none' : ''}`}
       >
 
@@ -82,6 +88,8 @@ export default function TodoCard({ todo, stampShape, categoryId, hasCustomStamp,
           className={`relative z-10 flex-shrink-0 w-8 h-8 -my-1 rounded-full border-2 transition-all flex items-center justify-center disabled:cursor-wait ${
             todo.completed
               ? 'border-green-700/70 text-green-700/80'
+              : overdue
+              ? 'border-red-300 text-red-200 hover:border-red-400 hover:text-red-400 hover:bg-red-50'
               : approaching
               ? 'border-orange-300 text-orange-200 hover:border-orange-400 hover:text-orange-400 hover:bg-orange-50'
               : 'border-[#C7C7CC] text-[#D2D2D7] hover:border-[#98989D] hover:text-[#AEAEB2] hover:bg-[#FAFAFC]'
@@ -135,11 +143,22 @@ export default function TodoCard({ todo, stampShape, categoryId, hasCustomStamp,
                   <path d="M2 6a4 4 0 016.5-3.1M2.5 1.5v2h2M10 6a4 4 0 01-6.5 3.1M9.5 10.5v-2h-2" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
                 {RECURRENCE_LABEL[todo.recurrence]}
+                {todo.recurrenceUntil && ` · ~${new Date(todo.recurrenceUntil).getMonth() + 1}/${new Date(todo.recurrenceUntil).getDate()}`}
               </span>
             )}
 
             {todo.completed && (
               <span className="text-[11px] text-green-700/80 font-medium">완료</span>
+            )}
+
+            {overdue && (
+              <span className="inline-flex items-center gap-0.5 text-[11px] text-red-600 font-medium">
+                <svg className="w-3 h-3" viewBox="0 0 12 12" fill="none">
+                  <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.2" />
+                  <path d="M4 4l4 4M8 4l-4 4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+                </svg>
+                기한초과
+              </span>
             )}
 
             {approaching && (
@@ -158,7 +177,13 @@ export default function TodoCard({ todo, stampShape, categoryId, hasCustomStamp,
           )}
 
           {todo.deadline && (
-            approaching && !todo.completed ? (
+            overdue ? (
+              <p className="text-xs mt-1 inline-block">
+                <span className="bg-red-200/70 text-red-800 px-1 py-0.5 -mx-1 rounded-[2px]">
+                  {formatDeadline(todo.deadline)}
+                </span>
+              </p>
+            ) : approaching && !todo.completed ? (
               <p className="text-xs mt-1 inline-block">
                 <span className="bg-orange-200/70 text-orange-800 px-1 py-0.5 -mx-1 rounded-[2px]">
                   {formatDeadline(todo.deadline)}

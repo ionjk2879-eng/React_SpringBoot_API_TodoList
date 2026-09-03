@@ -15,6 +15,9 @@ public class TodoResponse {
     private final Long categoryId;
     private final String categoryName;
     private final String recurrence;
+    private final LocalDateTime recurrenceUntil;
+    private final LocalDateTime completedAt;
+    private final LocalDateTime deletedAt;
     private final LocalDateTime createdAt;
     private final LocalDateTime updatedAt;
 
@@ -27,6 +30,9 @@ public class TodoResponse {
         this.categoryId = todo.getCategory() != null ? todo.getCategory().getId() : null;
         this.categoryName = todo.getCategory() != null ? todo.getCategory().getName() : null;
         this.recurrence = todo.getRecurrence();
+        this.recurrenceUntil = todo.getRecurrenceUntil();
+        this.completedAt = todo.getCompletedAt();
+        this.deletedAt = todo.getDeletedAt();
         this.createdAt = todo.getCreatedAt();
         this.updatedAt = todo.getUpdatedAt();
     }

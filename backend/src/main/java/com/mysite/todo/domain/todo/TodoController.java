@@ -14,6 +14,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/todos")
 @RequiredArgsConstructor
@@ -58,5 +60,26 @@ public class TodoController {
             @PathVariable Long id) {
         todoService.delete(userDetails.getUsername(), id);
         return ResponseEntity.ok(ApiResponse.ok(null, "삭제 성공"));
+    }
+
+    @GetMapping("/trash")
+    public ResponseEntity<ApiResponse<List<TodoResponse>>> getTrash(
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(ApiResponse.ok(todoService.getTrash(userDetails.getUsername())));
+    }
+
+    @PostMapping("/{id}/restore")
+    public ResponseEntity<ApiResponse<TodoResponse>> restore(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.ok(todoService.restore(userDetails.getUsername(), id), "복구 성공"));
+    }
+
+    @DeleteMapping("/{id}/permanent")
+    public ResponseEntity<ApiResponse<Void>> permanentlyDelete(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable Long id) {
+        todoService.permanentlyDelete(userDetails.getUsername(), id);
+        return ResponseEntity.ok(ApiResponse.ok(null, "영구 삭제 성공"));
     }
 }

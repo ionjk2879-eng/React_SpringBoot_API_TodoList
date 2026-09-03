@@ -30,3 +30,8 @@ export async function changePassword(currentPassword: string, newPassword: strin
 export async function deleteAccount(password: string): Promise<void> {
   await client.delete('/users/me', { data: { password } });
 }
+
+export async function updateAutoCleanup(days: number | null): Promise<UserProfile> {
+  const { data } = await client.put<ApiResponse<UserProfile>>('/users/me/auto-cleanup', { days });
+  return data.data;
+}

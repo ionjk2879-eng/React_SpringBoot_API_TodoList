@@ -8,10 +8,11 @@ interface Props {
   onDropTodo: (todoId: number, dateStr: string) => void;
 }
 
-function classifyTodo(todo: Todo): 'todo' | 'progress' | 'done' {
+function classifyTodo(todo: Todo): 'todo' | 'progress' | 'overdue' | 'done' {
   if (todo.completed) return 'done';
   if (todo.deadline) {
     const diff = new Date(todo.deadline).getTime() - Date.now();
+    if (diff < 0) return 'overdue';
     if (diff <= 24 * 60 * 60 * 1000) return 'progress';
   }
   return 'todo';
@@ -20,6 +21,7 @@ function classifyTodo(todo: Todo): 'todo' | 'progress' | 'done' {
 const CHIP: Record<string, string> = {
   todo: 'bg-[#ECECEF] text-[#86868B]',
   progress: 'bg-orange-100 text-orange-700',
+  overdue: 'bg-red-100 text-red-700',
   done: 'bg-green-100 text-green-600 line-through',
 };
 
@@ -37,6 +39,30 @@ export default function Calendar({ todos, selectedDate, onDateSelect, onDropTodo
     todos.forEach(todo => {
       if (todo.deadline) {
         const key = todo.deadline.slice(0, 10);
+        (map[key] ??= []).push(todo);
+      }
+    });
+    return map;
+  }, [todos]);
+
+  // 반복 일정은 다음 완료 시점까지 실제 행이 하나뿐이라, 달력에는 향후 발생일을 미리보기로만 투영한다.
+  const recurringPreviewByDate = useMemo(() => {
+    const map: Record<string, Todo[]> = {};
+    const horizonDays = 90;
+    todos.forEach(todo => {
+      if (!todo.recurrence || !todo.deadline || todo.completed) return;
+      const stepDays = todo.recurrence === 'WEEKLY' ? 7 : 1;
+      const base = new Date(todo.deadline);
+      const until = todo.recurrenceUntil ? new Date(todo.recurrenceUntil) : null;
+      for (let i = stepDays; i <= horizonDays; i += stepDays) {
+        const next = new Date(base);
+        next.setDate(next.getDate() + i);
+        if (until && next > until) break;
+        const key = [
+          next.getFullYear(),
+          String(next.getMonth() + 1).padStart(2, '0'),
+          String(next.getDate()).padStart(2, '0'),
+        ].join('-');
         (map[key] ??= []).push(todo);
       }
     });
@@ -117,6 +143,8 @@ export default function Calendar({ todos, selectedDate, onDateSelect, onDropTodo
 
           const dateStr = fmt(day);
           const dayTodos = todosByDate[dateStr] ?? [];
+          const previewTodos = recurringPreviewByDate[dateStr] ?? [];
+          const totalCount = dayTodos.length + previewTodos.length;
           const isToday = dateStr === todayStr;
           const isSelected = dateStr === selectedDate;
           const isSun = i % 7 === 0;
@@ -164,8 +192,17 @@ export default function Calendar({ todos, selectedDate, onDateSelect, onDropTodo
                     {todo.title}
                   </div>
                 ))}
-                {dayTodos.length > 2 && (
-                  <div className="text-[10px] text-[#AEAEB2] px-1">+{dayTodos.length - 2}</div>
+                {previewTodos.slice(0, Math.max(0, 2 - dayTodos.length)).map(todo => (
+                  <div
+                    key={`p-${todo.id}`}
+                    title="반복 예정"
+                    className="text-[10px] leading-tight px-1 py-0.5 rounded truncate border border-dashed border-[#D2D2D7] text-[#AEAEB2]"
+                  >
+                    ↻ {todo.title}
+                  </div>
+                ))}
+                {totalCount > 2 && (
+                  <div className="text-[10px] text-[#AEAEB2] px-1">+{totalCount - 2}</div>
                 )}
               </div>
             </div>

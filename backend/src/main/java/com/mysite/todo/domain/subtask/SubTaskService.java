@@ -63,7 +63,7 @@ public class SubTaskService {
     }
 
     private Todo getTodo(Long id, User user) {
-        return todoRepository.findByIdAndUser(id, user)
+        return todoRepository.findByIdAndUserAndDeletedAtIsNull(id, user)
                 .orElseThrow(() -> new IllegalArgumentException("Todo를 찾을 수 없습니다."));
     }
 }

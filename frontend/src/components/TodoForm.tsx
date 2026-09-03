@@ -16,6 +16,9 @@ export default function TodoForm({ categories, initial, onSubmit, onClose }: Pro
   );
   const [categoryId, setCategoryId] = useState<number | null>(initial?.categoryId ?? null);
   const [recurrence, setRecurrence] = useState<string>(initial?.recurrence ?? '');
+  const [recurrenceUntil, setRecurrenceUntil] = useState<string>(
+    initial?.recurrenceUntil ? initial.recurrenceUntil.slice(0, 10) : ''
+  );
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -28,6 +31,7 @@ export default function TodoForm({ categories, initial, onSubmit, onClose }: Pro
         deadline: deadline ? (deadline.length === 16 ? deadline + ':00' : deadline) : undefined,
         categoryId: categoryId ?? null,
         recurrence: recurrence || null,
+        recurrenceUntil: recurrence && recurrenceUntil ? recurrenceUntil + 'T23:59:59' : null,
       });
     } catch {
       // 상위 컴포넌트가 에러 메시지를 표시한다; 폼은 다시 시도할 수 있도록 열어둔다.
@@ -132,6 +136,21 @@ export default function TodoForm({ categories, initial, onSubmit, onClose }: Pro
             </select>
             {recurrence && !deadline && (
               <p className="text-[11px] text-orange-500 mt-1.5">반복하려면 마감일을 함께 입력하세요</p>
+            )}
+            {recurrence && (
+              <div className="mt-2">
+                <label className="block text-[11px] font-medium text-[#86868B] uppercase tracking-wide mb-1.5">
+                  반복 종료일
+                </label>
+                <input
+                  type="date"
+                  value={recurrenceUntil}
+                  onChange={e => setRecurrenceUntil(e.target.value)}
+                  min={deadline ? deadline.slice(0, 10) : undefined}
+                  className="w-full text-sm text-[#1D1D1F] border border-[#D2D2D7] rounded-lg px-3 py-2 focus:outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-100 transition-colors"
+                />
+                <p className="text-[11px] text-[#AEAEB2] mt-1">비워두면 계속 반복돼요</p>
+              </div>
             )}
           </div>
 
