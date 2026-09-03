@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getTodos, createTodo, updateTodo, toggleTodo, deleteTodo, getTrash, restoreTodo, permanentlyDeleteTodo } from '../api/todos';
 import { getCategories, createCategory, updateCategory, deleteCategory, uploadStampImage, deleteStampImage, togglePinCategory, toggleArchiveCategory, reorderCategories } from '../api/categories';
-import { getProfile, updateNickname, uploadProfileImage, deleteProfileImage, changePassword, deleteAccount, updateAutoCleanup } from '../api/users';
+import { getProfile, updateNickname, uploadProfileImage, deleteProfileImage, changePassword, deleteAccount, updateAutoCleanup, updateAccentColor } from '../api/users';
 import { logout } from '../api/auth';
 import TodoCard from '../components/TodoCard';
 import TodoForm from '../components/TodoForm';
@@ -13,6 +13,8 @@ import ProfileAvatar from '../components/ProfileAvatar';
 import ImageCropModal from '../components/ImageCropModal';
 import ConfirmModal from '../components/ConfirmModal';
 import { useDeadlineReminders } from '../hooks/useDeadlineReminders';
+import { CATEGORY_COLORS, categoryColorDotClass } from '../utils/categoryColors';
+import { ACCENT_OPTIONS, applyAccentTheme, cacheAccentTheme } from '../utils/accentTheme';
 import type { Category, Todo, TodoRequest } from '../types';
 
 interface Props { email: string; onLogout: () => void; }
@@ -38,20 +40,6 @@ function StampPicker({ value, onChange }: { value: string; onChange: (shape: str
       ))}
     </div>
   );
-}
-
-const CATEGORY_COLORS: { id: string; dot: string }[] = [
-  { id: 'orange', dot: 'bg-orange-500' },
-  { id: 'green', dot: 'bg-green-500' },
-  { id: 'blue', dot: 'bg-blue-500' },
-  { id: 'red', dot: 'bg-red-500' },
-  { id: 'purple', dot: 'bg-[#AF52DE]' },
-  { id: 'pink', dot: 'bg-[#FF2D55]' },
-  { id: 'teal', dot: 'bg-[#30B0C7]' },
-];
-
-function categoryColorDotClass(color: string | null): string | null {
-  return CATEGORY_COLORS.find(c => c.id === color)?.dot ?? null;
 }
 
 function ColorPicker({ value, onChange }: { value: string | null; onChange: (color: string | null) => void }) {
@@ -194,6 +182,12 @@ export default function TodoPage({ email, onLogout }: Props) {
     queryKey: ['profile'],
     queryFn: getProfile,
   });
+
+  useEffect(() => {
+    if (!profile) return;
+    applyAccentTheme(profile.accentColor);
+    cacheAccentTheme(profile.accentColor);
+  }, [profile]);
 
   const { data: categories = [] } = useQuery({
     queryKey: ['categories'],
@@ -375,6 +369,12 @@ export default function TodoPage({ email, onLogout }: Props) {
     mutationFn: (days: number | null) => updateAutoCleanup(days),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['profile'] }),
     onError: err => setErrorMsg(extractErrorMessage(err, '자동 정리 설정을 변경하지 못했습니다.')),
+  });
+
+  const accentColorMutation = useMutation({
+    mutationFn: (color: string) => updateAccentColor(color),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['profile'] }),
+    onError: err => setErrorMsg(extractErrorMessage(err, '포인트 컬러를 변경하지 못했습니다.')),
   });
 
   const restoreMutation = useMutation({
@@ -1004,6 +1004,31 @@ export default function TodoPage({ email, onLogout }: Props) {
                     <label className="block text-xs font-medium text-[#86868B] uppercase tracking-wide mb-1.5">이메일</label>
                     <p className="text-sm text-[#1D1D1F]">{email}</p>
                   </div>
+
+                  <div className="border-t border-[#D2D2D7]" />
+
+                  {/* Accent color */}
+                  <div>
+                    <label className="block text-xs font-medium text-[#86868B] uppercase tracking-wide mb-1.5">
+                      포인트 컬러
+                    </label>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {ACCENT_OPTIONS.map(opt => (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          aria-label={opt.label}
+                          title={opt.label}
+                          disabled={accentColorMutation.isPending}
+                          onClick={() => accentColorMutation.mutate(opt.id)}
+                          style={{ backgroundColor: opt.swatch }}
+                          className={`w-6 h-6 rounded-full flex-shrink-0 transition-shadow disabled:opacity-50 ${
+                            (profile?.accentColor ?? 'orange') === opt.id ? 'ring-2 ring-offset-2 ring-[#1D1D1F]' : ''
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  </div>
                 </div>
 
                 {/* Change password */}
@@ -1474,6 +1499,7 @@ export default function TodoPage({ email, onLogout }: Props) {
                         stampShape={categories.find(c => c.id === todo.categoryId)?.stampShape ?? 'check'}
                         categoryId={todo.categoryId}
                         hasCustomStamp={categories.find(c => c.id === todo.categoryId)?.hasCustomStamp ?? false}
+                        categoryColor={categories.find(c => c.id === todo.categoryId)?.color ?? null}
                         stampVersion={todo.categoryId != null ? stampVersions[todo.categoryId] ?? 0 : 0}
                         togglePending={toggleMutation.isPending && toggleMutation.variables === todo.id}
                         deletePending={deleteMutation.isPending && deleteMutation.variables === todo.id}
@@ -1498,6 +1524,7 @@ export default function TodoPage({ email, onLogout }: Props) {
               <div className="flex-1 overflow-y-auto px-6 py-6 min-w-0">
                 <Calendar
                   todos={allTodos}
+                  categories={categories}
                   selectedDate={selectedDate}
                   onDateSelect={date => {
                     setSelectedDate(date);

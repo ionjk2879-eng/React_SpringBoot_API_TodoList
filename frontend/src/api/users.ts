@@ -35,3 +35,8 @@ export async function updateAutoCleanup(days: number | null): Promise<UserProfil
   const { data } = await client.put<ApiResponse<UserProfile>>('/users/me/auto-cleanup', { days });
   return data.data;
 }
+
+export async function updateAccentColor(color: string | null): Promise<UserProfile> {
+  const { data } = await client.put<ApiResponse<UserProfile>>('/users/me/accent-color', { color });
+  return data.data;
+}

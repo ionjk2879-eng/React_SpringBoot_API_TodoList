@@ -5,6 +5,7 @@ import com.mysite.todo.domain.subtask.SubTaskRepository;
 import com.mysite.todo.domain.todo.TodoRepository;
 import com.mysite.todo.domain.user.dto.ChangePasswordRequest;
 import com.mysite.todo.domain.user.dto.DeleteAccountRequest;
+import com.mysite.todo.domain.user.dto.UpdateAccentColorRequest;
 import com.mysite.todo.domain.user.dto.UpdateAutoCleanupRequest;
 import com.mysite.todo.domain.user.dto.UpdateNicknameRequest;
 import com.mysite.todo.domain.user.dto.UserProfileResponse;
@@ -26,6 +27,8 @@ public class UserProfileService {
     private static final Set<String> ALLOWED_IMAGE_TYPES =
             Set.of("image/png", "image/jpeg", "image/webp");
     private static final long MAX_IMAGE_BYTES = 800_000;
+    private static final Set<String> ALLOWED_ACCENT_COLORS =
+            Set.of("orange", "green", "blue", "red", "purple", "pink", "teal");
 
     private final UserRepository userRepository;
     private final TodoRepository todoRepository;
@@ -97,6 +100,14 @@ public class UserProfileService {
         User user = getUser(email);
         Integer days = req.getDays();
         user.setAutoCleanupDays(days != null && days > 0 ? days : null);
+        return new UserProfileResponse(userRepository.save(user));
+    }
+
+    @Transactional
+    public UserProfileResponse updateAccentColor(String email, UpdateAccentColorRequest req) {
+        User user = getUser(email);
+        String color = req.getColor();
+        user.setAccentColor(color != null && ALLOWED_ACCENT_COLORS.contains(color) ? color : null);
         return new UserProfileResponse(userRepository.save(user));
     }
 

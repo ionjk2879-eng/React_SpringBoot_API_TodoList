@@ -11,6 +11,7 @@ public class UserProfileResponse {
     private final String nickname;
     private final boolean hasProfileImage;
     private final Integer autoCleanupDays;
+    private final String accentColor;
     private final LocalDateTime createdAt;
 
     public UserProfileResponse(User user) {
@@ -18,6 +19,7 @@ public class UserProfileResponse {
         this.nickname = user.getNickname();
         this.hasProfileImage = user.getProfileImageData() != null;
         this.autoCleanupDays = user.getAutoCleanupDays();
+        this.accentColor = user.getAccentColor();
         this.createdAt = user.getCreatedAt();
     }
 }

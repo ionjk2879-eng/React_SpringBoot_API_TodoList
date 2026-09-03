@@ -14,6 +14,7 @@ export interface UserProfile {
   nickname: string | null;
   hasProfileImage: boolean;
   autoCleanupDays: number | null;
+  accentColor: string | null;
   createdAt: string;
 }
 

@@ -39,6 +39,9 @@ public class User {
 
     private Integer autoCleanupDays;
 
+    @Column(length = 20)
+    private String accentColor;
+
     @CreatedDate
     @Column(updatable = false)
     private LocalDateTime createdAt;

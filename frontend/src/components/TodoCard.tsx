@@ -2,12 +2,14 @@ import { useState } from 'react';
 import type { Todo } from '../types';
 import CategoryStamp from './CategoryStamp';
 import SubTaskList from './SubTaskList';
+import { findCategoryColor } from '../utils/categoryColors';
 
 interface Props {
   todo: Todo;
   stampShape: string;
   categoryId: number | null;
   hasCustomStamp: boolean;
+  categoryColor?: string | null;
   stampVersion?: number;
   togglePending?: boolean;
   deletePending?: boolean;
@@ -40,9 +42,10 @@ function formatDeadline(deadline: string): string {
 
 const RECURRENCE_LABEL: Record<string, string> = { DAILY: '매일', WEEKLY: '매주' };
 
-export default function TodoCard({ todo, stampShape, categoryId, hasCustomStamp, stampVersion = 0, togglePending = false, deletePending = false, onToggle, onEdit, onDelete }: Props) {
+export default function TodoCard({ todo, stampShape, categoryId, hasCustomStamp, categoryColor = null, stampVersion = 0, togglePending = false, deletePending = false, onToggle, onEdit, onDelete }: Props) {
   const approaching = isApproaching(todo);
   const overdue = isOverdue(todo);
+  const colorSwatch = findCategoryColor(categoryColor);
   const [pressed, setPressed] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
@@ -132,7 +135,9 @@ export default function TodoCard({ todo, stampShape, categoryId, hasCustomStamp,
             </span>
 
             {todo.categoryName && (
-              <span className="inline-flex items-center text-[11px] text-[#86868B] bg-[#ECECEF] px-1.5 py-0.5 rounded">
+              <span className={`inline-flex items-center text-[11px] px-1.5 py-0.5 rounded ${
+                colorSwatch ? `${colorSwatch.bg} ${colorSwatch.text}` : 'text-[#86868B] bg-[#ECECEF]'
+              }`}>
                 {todo.categoryName}
               </span>
             )}

@@ -1,8 +1,10 @@
 import { useState, useMemo } from 'react';
-import type { Todo } from '../types';
+import type { Category, Todo } from '../types';
+import { categoryColorDotClass } from '../utils/categoryColors';
 
 interface Props {
   todos: Todo[];
+  categories: Category[];
   selectedDate: string | null;
   onDateSelect: (date: string | null) => void;
   onDropTodo: (todoId: number, dateStr: string) => void;
@@ -27,9 +29,15 @@ const CHIP: Record<string, string> = {
 
 const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
 
-export default function Calendar({ todos, selectedDate, onDateSelect, onDropTodo }: Props) {
+export default function Calendar({ todos, categories, selectedDate, onDateSelect, onDropTodo }: Props) {
   const [viewDate, setViewDate] = useState(() => new Date());
   const [dragOverDate, setDragOverDate] = useState<string | null>(null);
+
+  const categoryColorById = useMemo(() => {
+    const map: Record<number, string | null> = {};
+    categories.forEach(c => { map[c.id] = c.color; });
+    return map;
+  }, [categories]);
 
   const year = viewDate.getFullYear();
   const month = viewDate.getMonth();
@@ -184,23 +192,32 @@ export default function Calendar({ todos, selectedDate, onDateSelect, onDropTodo
               </span>
 
               <div className="space-y-0.5">
-                {dayTodos.slice(0, 2).map(todo => (
-                  <div
-                    key={todo.id}
-                    className={`text-[10px] leading-tight px-1 py-0.5 rounded truncate ${CHIP[classifyTodo(todo)]}`}
-                  >
-                    {todo.title}
-                  </div>
-                ))}
-                {previewTodos.slice(0, Math.max(0, 2 - dayTodos.length)).map(todo => (
-                  <div
-                    key={`p-${todo.id}`}
-                    title="반복 예정"
-                    className="text-[10px] leading-tight px-1 py-0.5 rounded truncate border border-dashed border-[#D2D2D7] text-[#AEAEB2]"
-                  >
-                    ↻ {todo.title}
-                  </div>
-                ))}
+                {dayTodos.slice(0, 2).map(todo => {
+                  const colorDot = categoryColorDotClass(todo.categoryId != null ? categoryColorById[todo.categoryId] : null);
+                  return (
+                    <div
+                      key={todo.id}
+                      className={`flex items-center gap-1 text-[10px] leading-tight px-1 py-0.5 rounded truncate ${CHIP[classifyTodo(todo)]}`}
+                    >
+                      {colorDot && <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${colorDot}`} />}
+                      <span className="truncate">{todo.title}</span>
+                    </div>
+                  );
+                })}
+                {previewTodos.slice(0, Math.max(0, 2 - dayTodos.length)).map(todo => {
+                  const colorDot = categoryColorDotClass(todo.categoryId != null ? categoryColorById[todo.categoryId] : null);
+                  return (
+                    <div
+                      key={`p-${todo.id}`}
+                      title="반복 예정"
+                      className="flex items-center gap-1 text-[10px] leading-tight px-1 py-0.5 rounded truncate border border-dashed border-[#D2D2D7] text-[#AEAEB2]"
+                    >
+                      <span>↻</span>
+                      {colorDot && <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${colorDot}`} />}
+                      <span className="truncate">{todo.title}</span>
+                    </div>
+                  );
+                })}
                 {totalCount > 2 && (
                   <div className="text-[10px] text-[#AEAEB2] px-1">+{totalCount - 2}</div>
                 )}

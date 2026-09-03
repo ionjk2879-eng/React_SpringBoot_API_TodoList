@@ -3,6 +3,7 @@ package com.mysite.todo.domain.user;
 import com.mysite.todo.common.ApiResponse;
 import com.mysite.todo.domain.user.dto.ChangePasswordRequest;
 import com.mysite.todo.domain.user.dto.DeleteAccountRequest;
+import com.mysite.todo.domain.user.dto.UpdateAccentColorRequest;
 import com.mysite.todo.domain.user.dto.UpdateAutoCleanupRequest;
 import com.mysite.todo.domain.user.dto.UpdateNicknameRequest;
 import com.mysite.todo.domain.user.dto.UserProfileResponse;
@@ -74,6 +75,14 @@ public class UserProfileController {
             @RequestBody UpdateAutoCleanupRequest req) {
         return ResponseEntity.ok(ApiResponse.ok(
                 userProfileService.updateAutoCleanup(userDetails.getUsername(), req), "자동 정리 설정 변경 성공"));
+    }
+
+    @PutMapping("/accent-color")
+    public ResponseEntity<ApiResponse<UserProfileResponse>> updateAccentColor(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestBody UpdateAccentColorRequest req) {
+        return ResponseEntity.ok(ApiResponse.ok(
+                userProfileService.updateAccentColor(userDetails.getUsername(), req), "포인트 컬러 변경 성공"));
     }
 
     @DeleteMapping
