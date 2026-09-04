@@ -13,9 +13,11 @@ interface Props {
   stampVersion?: number;
   togglePending?: boolean;
   deletePending?: boolean;
+  isFocused?: boolean;
   onToggle: (id: number) => void;
   onEdit: (todo: Todo) => void;
   onDelete: (id: number) => void;
+  onFocusCard?: (id: number | null) => void;
 }
 
 function isApproaching(todo: Todo): boolean {
@@ -42,7 +44,7 @@ function formatDeadline(deadline: string): string {
 
 const RECURRENCE_LABEL: Record<string, string> = { DAILY: '매일', WEEKLY: '매주' };
 
-export default function TodoCard({ todo, stampShape, categoryId, hasCustomStamp, categoryColor = null, stampVersion = 0, togglePending = false, deletePending = false, onToggle, onEdit, onDelete }: Props) {
+export default function TodoCard({ todo, stampShape, categoryId, hasCustomStamp, categoryColor = null, stampVersion = 0, togglePending = false, deletePending = false, isFocused = false, onToggle, onEdit, onDelete, onFocusCard }: Props) {
   const approaching = isApproaching(todo);
   const overdue = isOverdue(todo);
   const colorSwatch = findCategoryColor(categoryColor);
@@ -124,7 +126,12 @@ export default function TodoCard({ todo, stampShape, categoryId, hasCustomStamp,
         </button>
 
         {/* Right: Content + actions */}
-        <div className="flex flex-1 items-start gap-2 px-4 py-3 min-w-0">
+        <div
+          tabIndex={0}
+          onFocus={() => onFocusCard?.(todo.id)}
+          onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) onFocusCard?.(null); }}
+          className={`flex flex-1 items-start gap-2 px-4 py-3 min-w-0 outline-none ${isFocused ? 'ring-2 ring-inset ring-orange-400/60' : ''}`}
+        >
 
           {/* Content */}
           <div className="flex-1 min-w-0">

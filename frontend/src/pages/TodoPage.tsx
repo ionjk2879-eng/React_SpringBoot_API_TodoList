@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getTodos, createTodo, updateTodo, toggleTodo, deleteTodo, getTrash, restoreTodo, permanentlyDeleteTodo } from '../api/todos';
 import { getCategories, createCategory, updateCategory, deleteCategory, uploadStampImage, deleteStampImage, togglePinCategory, toggleArchiveCategory, reorderCategories } from '../api/categories';
@@ -163,6 +163,7 @@ export default function TodoPage({ email, onLogout }: Props) {
   const [passwordSuccessMsg, setPasswordSuccessMsg] = useState<string | null>(null);
   const [showDeleteAccount, setShowDeleteAccount] = useState(false);
   const [deleteAccountPassword, setDeleteAccountPassword] = useState('');
+  const [focusedTodoId, setFocusedTodoId] = useState<number | null>(null);
 
   function bumpStampVersion(id: number) {
     setStampVersions(v => ({ ...v, [id]: (v[id] ?? 0) + 1 }));
@@ -508,6 +509,51 @@ export default function TodoPage({ email, onLogout }: Props) {
   const allTodos: Todo[] = todoPage?.content ?? [];
 
   useDeadlineReminders(allTodos, notificationsEnabled, reminderLeadHours);
+
+  const shortcutRef = useRef({
+    cropImageUrl: null as string | null,
+    confirmDelete: null as typeof confirmDelete,
+    editingTodo: null as Todo | null,
+    showForm: false,
+    focusedTodoId: null as number | null,
+    allTodos: [] as Todo[],
+  });
+  useEffect(() => {
+    shortcutRef.current = { cropImageUrl, confirmDelete, editingTodo, showForm, focusedTodoId, allTodos };
+  });
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      const s = shortcutRef.current;
+      if (e.key === 'Escape') {
+        if (s.cropImageUrl) { setCropImageUrl(null); setCropContext(null); return; }
+        if (s.confirmDelete) { setConfirmDelete(null); return; }
+        if (s.editingTodo) { setEditingTodo(null); return; }
+        if (s.showForm) { setShowForm(false); return; }
+        return;
+      }
+      const tag = (e.target as HTMLElement).tagName;
+      const editable = ['INPUT', 'TEXTAREA', 'SELECT'].includes(tag) || (e.target as HTMLElement).isContentEditable;
+      if (editable) return;
+      if (e.key === 'n' || e.key === 'N') {
+        e.preventDefault();
+        setShowForm(true);
+        return;
+      }
+      if (e.key === ' ' && s.focusedTodoId !== null) {
+        e.preventDefault();
+        toggleMutation.mutate(s.focusedTodoId);
+        return;
+      }
+      if ((e.key === 'e' || e.key === 'E') && s.focusedTodoId !== null) {
+        e.preventDefault();
+        const t = s.allTodos.find(x => x.id === s.focusedTodoId);
+        if (t) setEditingTodo(t);
+        return;
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleReminderLeadHoursChange(hours: number) {
     setReminderLeadHours(hours);
@@ -1500,9 +1546,11 @@ export default function TodoPage({ email, onLogout }: Props) {
                         stampVersion={todo.categoryId != null ? stampVersions[todo.categoryId] ?? 0 : 0}
                         togglePending={toggleMutation.isPending && toggleMutation.variables === todo.id}
                         deletePending={deleteMutation.isPending && deleteMutation.variables === todo.id}
+                        isFocused={focusedTodoId === todo.id}
                         onToggle={id => toggleMutation.mutate(id)}
                         onEdit={t => setEditingTodo(t)}
                         onDelete={id => setConfirmDelete({ kind: 'todo', id })}
+                        onFocusCard={setFocusedTodoId}
                       />
                     ))}
                   </div>
