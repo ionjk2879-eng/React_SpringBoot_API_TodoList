@@ -48,6 +48,10 @@ public class Todo {
 
     private LocalDateTime recurrenceUntil;
 
+    /** 반복 일정의 다음 항목이 이미 생성됐는지 여부 — 완료/해제를 반복해도 중복 생성 방지 */
+    @Column(nullable = false)
+    private boolean nextSpawned = false;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id")
     private Category category;

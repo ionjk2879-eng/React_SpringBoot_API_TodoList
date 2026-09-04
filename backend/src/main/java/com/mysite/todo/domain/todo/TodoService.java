@@ -67,9 +67,18 @@ public class TodoService {
         boolean completing = !todo.isCompleted();
         todo.setCompleted(completing);
         todo.setCompletedAt(completing ? LocalDateTime.now() : null);
+
+        boolean shouldSpawn = completing
+                && todo.getRecurrence() != null
+                && todo.getDeadline() != null
+                && !todo.isNextSpawned();
+        if (shouldSpawn) {
+            todo.setNextSpawned(true);
+        }
+
         TodoResponse response = new TodoResponse(todoRepository.save(todo));
 
-        if (completing && todo.getRecurrence() != null && todo.getDeadline() != null) {
+        if (shouldSpawn) {
             LocalDateTime nextDeadline = todo.getDeadline().plusDays("WEEKLY".equals(todo.getRecurrence()) ? 7 : 1);
             LocalDateTime until = todo.getRecurrenceUntil();
             if (until == null || !nextDeadline.isAfter(until)) {
