@@ -560,7 +560,7 @@ export default function TodoPage({ email, onLogout }: Props) {
 
   const statusCards: { key: StatusFilter; label: string; count: number; color: string; activeColor: string }[] = [
     { key: 'todo',     label: '해야 할 일', count: counts.todo,     color: 'text-[#86868B] border-[#D2D2D7] bg-white',   activeColor: 'border-[#1D1D1F] bg-[#ECECEF] text-[#1D1D1F]' },
-    { key: 'progress', label: '마감임박',   count: counts.progress, color: 'text-orange-600 border-orange-200 bg-orange-50', activeColor: 'border-orange-500 bg-orange-100 text-orange-700' },
+    { key: 'progress', label: '마감임박',   count: counts.progress, color: 'text-amber-600 border-amber-200 bg-amber-50',   activeColor: 'border-amber-500 bg-amber-100 text-amber-700' },
     { key: 'overdue',  label: '기한초과',   count: counts.overdue,  color: 'text-red-600 border-red-200 bg-red-50',       activeColor: 'border-red-500 bg-red-100 text-red-700' },
     { key: 'done',     label: '완료',       count: counts.done,     color: 'text-green-600 border-green-200 bg-green-50',   activeColor: 'border-green-500 bg-green-100 text-green-700' },
   ];

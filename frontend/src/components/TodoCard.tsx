@@ -76,7 +76,7 @@ export default function TodoCard({ todo, stampShape, categoryId, hasCustomStamp,
           window.setTimeout(() => document.body.removeChild(ghost), 0);
         }}
         className={`group relative flex items-stretch transition-all cursor-grab active:cursor-grabbing overflow-hidden ${
-          overdue ? 'bg-red-50/70' : approaching ? 'bg-orange-50/70' : 'hover:bg-[#FAFAFC]'
+          overdue ? 'bg-red-50/70' : approaching ? 'bg-amber-50/70' : 'hover:bg-[#FAFAFC]'
         } ${pressed ? 'card-press' : ''} ${deletePending ? 'opacity-40 pointer-events-none' : ''}`}
       >
 
@@ -92,7 +92,7 @@ export default function TodoCard({ todo, stampShape, categoryId, hasCustomStamp,
               : overdue
               ? 'border-r-[#D2D2D7] hover:bg-red-50/60'
               : approaching
-              ? 'border-r-[#D2D2D7] hover:bg-orange-50/60'
+              ? 'border-r-[#D2D2D7] hover:bg-amber-50/60'
               : 'border-r-[#D2D2D7] hover:bg-[#F5F5F7]'
           }`}
         >
@@ -114,7 +114,7 @@ export default function TodoCard({ todo, stampShape, categoryId, hasCustomStamp,
               fill="none"
               className={`w-8 h-8 transition-colors ${
                 overdue ? 'text-red-300 hover:text-red-500'
-                : approaching ? 'text-orange-300 hover:text-orange-500'
+                : approaching ? 'text-amber-400 hover:text-amber-600'
                 : 'text-[#D2D2D7] hover:text-[#AEAEB2]'
               }`}
             >
@@ -168,7 +168,7 @@ export default function TodoCard({ todo, stampShape, categoryId, hasCustomStamp,
               )}
 
               {approaching && (
-                <span className="inline-flex items-center gap-0.5 text-[11px] text-orange-600 font-medium">
+                <span className="inline-flex items-center gap-0.5 text-[11px] text-amber-600 font-medium">
                   <svg className="w-3 h-3" viewBox="0 0 12 12" fill="none">
                     <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.2" />
                     <path d="M6 3.5v2.5l1.5 1" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
@@ -191,7 +191,7 @@ export default function TodoCard({ todo, stampShape, categoryId, hasCustomStamp,
                 </p>
               ) : approaching && !todo.completed ? (
                 <p className="text-xs mt-1 inline-block">
-                  <span className="bg-orange-200/70 text-orange-800 px-1 py-0.5 -mx-1 rounded-[2px]">
+                  <span className="bg-amber-200/70 text-amber-800 px-1 py-0.5 -mx-1 rounded-[2px]">
                     {formatDeadline(todo.deadline)}
                   </span>
                 </p>
