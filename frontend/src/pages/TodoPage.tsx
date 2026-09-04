@@ -918,6 +918,12 @@ export default function TodoPage({ email, onLogout }: Props) {
                   )
                 ))}
 
+                {categories.filter(cat => !cat.archived).length === 0 && (
+                  <div className="px-2 py-3 text-center">
+                    <p className="text-[11px] text-[#AEAEB2] mb-1.5">카테고리가 없어요</p>
+                    <p className="text-[10px] text-[#C7C7CC]">만들면 할 일을 분류할 수 있어요</p>
+                  </div>
+                )}
                 <button
                   type="button"
                   onClick={() => setShowCategoryForm(true)}
@@ -1578,25 +1584,115 @@ export default function TodoPage({ email, onLogout }: Props) {
                 </button>
               </div>
             ) : filteredTodos.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-center">
-                <div className="w-10 h-10 bg-[#ECECEF] rounded-full flex items-center justify-center mb-3">
-                  <svg className="w-5 h-5 text-[#AEAEB2]" viewBox="0 0 20 20" fill="none">
-                    <path d="M6 4H4a1 1 0 00-1 1v12a1 1 0 001 1h12a1 1 0 001-1V5a1 1 0 00-1-1h-2M6 4a1 1 0 011-1h6a1 1 0 011 1v0a1 1 0 01-1 1H7a1 1 0 01-1-1z" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+              allTodos.length === 0 ? (
+              /* ── 첫 사용자 온보딩 ── */
+              <div className="flex flex-col items-center justify-center py-14 text-center px-4">
+                <div className="w-16 h-16 bg-orange-50 rounded-2xl flex items-center justify-center mb-5 shadow-sm">
+                  <svg className="w-8 h-8 text-orange-400" viewBox="0 0 32 32" fill="none">
+                    <rect x="5" y="3" width="22" height="26" rx="3" stroke="currentColor" strokeWidth="1.8" />
+                    <path d="M11 11h10M11 16h10M11 21h6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                    <circle cx="8" cy="11" r="1.3" fill="currentColor" />
+                    <circle cx="8" cy="16" r="1.3" fill="currentColor" />
+                    <circle cx="8" cy="21" r="1.3" fill="currentColor" />
                   </svg>
                 </div>
-                <p className="text-sm font-medium text-[#86868B]">
-                  {trimmedQuery ? `"${searchQuery}" 검색 결과가 없습니다` :
-                   selectedDate ? '해당 날짜의 할 일이 없습니다' :
-                   statusFilter === 'todo' ? '해야 할 일이 없습니다' :
-                   statusFilter === 'progress' ? '마감임박 할 일이 없습니다' :
-                   statusFilter === 'overdue' ? '기한초과 할 일이 없습니다' :
-                   statusFilter === 'done' ? '완료된 항목이 없습니다' : '할 일이 없습니다'}
+                <h2 className="text-base font-semibold text-[#1D1D1F] mb-1">할 일 목록을 시작해보세요</h2>
+                <p className="text-sm text-[#86868B] mb-6 max-w-xs leading-relaxed">
+                  할 일을 추가하고 체크하면서 하루를 효율적으로 정리하세요
                 </p>
-                <p className="text-xs text-[#AEAEB2] mt-1">
-                  {trimmedQuery ? '다른 검색어로 시도해보세요' :
-                   selectedDate ? '달력에서 다른 날짜를 선택하거나 클릭해서 해제하세요' : '위 버튼으로 추가해보세요'}
+                <div className="w-full max-w-xs space-y-2 mb-6">
+                  <button
+                    onClick={() => setShowCategoryForm(true)}
+                    className="w-full flex items-center gap-3 bg-white border border-[#D2D2D7] hover:border-orange-300 hover:bg-orange-50/40 rounded-xl px-4 py-3 text-left transition-all group"
+                  >
+                    <span className="w-7 h-7 bg-[#F5F5F7] group-hover:bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-semibold text-[#86868B] group-hover:text-orange-600 transition-colors">1</span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-[#1D1D1F]">카테고리 만들기 (선택)</p>
+                      <p className="text-xs text-[#AEAEB2]">프로젝트별로 할 일을 분류해요</p>
+                    </div>
+                    <svg className="w-4 h-4 text-[#C7C7CC] group-hover:text-orange-400 flex-shrink-0 transition-colors" viewBox="0 0 16 16" fill="none">
+                      <path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => setShowForm(true)}
+                    className="w-full flex items-center gap-3 bg-orange-500 hover:bg-orange-600 rounded-xl px-4 py-3 text-left transition-colors group"
+                  >
+                    <span className="w-7 h-7 bg-orange-400 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-semibold text-white">2</span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-white">첫 번째 할 일 추가하기</p>
+                      <p className="text-xs text-orange-200">지금 바로 시작해보세요</p>
+                    </div>
+                    <svg className="w-4 h-4 text-orange-300 flex-shrink-0" viewBox="0 0 16 16" fill="none">
+                      <path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+                </div>
+                <p className="text-xs text-[#AEAEB2]">
+                  단축키: <kbd className="px-1.5 py-0.5 bg-[#ECECEF] rounded text-[10px] font-mono text-[#86868B]">N</kbd> 할 일 추가
                 </p>
               </div>
+              ) : (
+              /* ── 필터 결과 없음 ── */
+              <div className="flex flex-col items-center justify-center py-16 text-center px-4">
+                <div className="w-10 h-10 bg-[#ECECEF] rounded-full flex items-center justify-center mb-3">
+                  <svg className="w-5 h-5 text-[#AEAEB2]" viewBox="0 0 20 20" fill="none">
+                    <circle cx="9" cy="9" r="5.5" stroke="currentColor" strokeWidth="1.4" />
+                    <path d="M13.5 13.5L17 17" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                  </svg>
+                </div>
+                <p className="text-sm font-medium text-[#1D1D1F]">
+                  {trimmedQuery ? `"${searchQuery}"에 맞는 할 일이 없어요` :
+                   selectedDate ? '해당 날짜에 마감인 할 일이 없어요' :
+                   statusFilter === 'todo' ? '해야 할 일이 모두 완료됐어요 🎉' :
+                   statusFilter === 'progress' ? '마감임박 할 일이 없어요' :
+                   statusFilter === 'overdue' ? '기한 초과된 할 일이 없어요 👍' :
+                   statusFilter === 'done' ? '아직 완료한 할 일이 없어요' :
+                   activeCategory ? `'${activeCategory.name}'에 할 일이 없어요` :
+                   '할 일이 없습니다'}
+                </p>
+                <p className="text-xs text-[#AEAEB2] mt-1 mb-4">
+                  {trimmedQuery ? '다른 검색어를 입력해보세요' :
+                   selectedDate ? '달력에서 다른 날짜를 선택하거나 해제해보세요' :
+                   statusFilter !== 'all' ? '필터를 해제하면 전체 목록을 볼 수 있어요' :
+                   '새 할 일 버튼으로 추가해보세요'}
+                </p>
+                <div className="flex gap-2 flex-wrap justify-center">
+                  {trimmedQuery && (
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      className="text-xs text-orange-600 hover:text-orange-700 font-medium px-3 py-1.5 rounded-md hover:bg-orange-50 border border-orange-200 transition-colors"
+                    >
+                      검색 초기화
+                    </button>
+                  )}
+                  {selectedDate && (
+                    <button
+                      onClick={() => setSelectedDate(null)}
+                      className="text-xs text-orange-600 hover:text-orange-700 font-medium px-3 py-1.5 rounded-md hover:bg-orange-50 border border-orange-200 transition-colors"
+                    >
+                      날짜 필터 해제
+                    </button>
+                  )}
+                  {statusFilter !== 'all' && !trimmedQuery && !selectedDate && (
+                    <button
+                      onClick={() => setStatusFilter('all')}
+                      className="text-xs text-orange-600 hover:text-orange-700 font-medium px-3 py-1.5 rounded-md hover:bg-orange-50 border border-orange-200 transition-colors"
+                    >
+                      전체 보기
+                    </button>
+                  )}
+                  {!trimmedQuery && statusFilter === 'all' && !selectedDate && (
+                    <button
+                      onClick={() => setShowForm(true)}
+                      className="text-xs text-white bg-orange-500 hover:bg-orange-600 font-medium px-3 py-1.5 rounded-md transition-colors"
+                    >
+                      + 할 일 추가
+                    </button>
+                  )}
+                </div>
+              </div>
+              )
             ) : (
               <div className="space-y-3">
                 {groupByDate(filteredTodos).map(group => (
