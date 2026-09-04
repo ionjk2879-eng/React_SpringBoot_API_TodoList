@@ -1644,9 +1644,9 @@ export default function TodoPage({ email, onLogout }: Props) {
                 <p className="text-sm font-medium text-[#1D1D1F]">
                   {trimmedQuery ? `"${searchQuery}"에 맞는 할 일이 없어요` :
                    selectedDate ? '해당 날짜에 마감인 할 일이 없어요' :
-                   statusFilter === 'todo' ? '해야 할 일이 모두 완료됐어요 🎉' :
+                   statusFilter === 'todo' ? '해야 할 일이 모두 완료됐어요' :
                    statusFilter === 'progress' ? '마감임박 할 일이 없어요' :
-                   statusFilter === 'overdue' ? '기한 초과된 할 일이 없어요 👍' :
+                   statusFilter === 'overdue' ? '기한 초과된 할 일이 없어요' :
                    statusFilter === 'done' ? '아직 완료한 할 일이 없어요' :
                    activeCategory ? `'${activeCategory.name}'에 할 일이 없어요` :
                    '할 일이 없습니다'}
