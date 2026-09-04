@@ -654,8 +654,13 @@ export default function TodoPage({ email, onLogout }: Props) {
 
         {showSidebar && (
         <>
+        {/* Mobile backdrop */}
+        <div
+          className="fixed inset-0 bg-black/30 z-30 md:hidden"
+          onClick={() => setShowSidebar(false)}
+        />
         {/* Sidebar */}
-        <aside className="w-52 flex-shrink-0 flex flex-col py-6 overflow-y-auto bg-[#FAFAFC]">
+        <aside className="fixed inset-y-0 left-0 z-40 w-72 md:relative md:inset-auto md:z-auto md:w-52 md:flex-shrink-0 flex flex-col py-6 overflow-y-auto bg-[#FAFAFC] shadow-xl md:shadow-none">
 
           {/* Profile card */}
           <div className="flex flex-col items-center text-center px-4 mb-6 flex-shrink-0">
@@ -925,15 +930,15 @@ export default function TodoPage({ email, onLogout }: Props) {
           </div>
         </aside>
 
-        {/* Divider */}
-        <div className="w-px bg-[#D2D2D7] flex-shrink-0" />
+        {/* Sidebar–main divider (desktop only) */}
+        <div className="hidden md:block w-px bg-[#D2D2D7] flex-shrink-0" />
         </>
         )}
 
         {/* Main — split 50/50, or full-width Settings */}
-        <div className="flex-1 flex overflow-hidden min-h-0">
+        <div className="flex-1 flex flex-col md:flex-row overflow-y-auto md:overflow-hidden min-h-0">
           {sidebarView === 'settings' ? (
-          <div className="flex-1 overflow-y-auto px-8 py-8 min-w-0">
+          <div className="md:flex-1 md:overflow-y-auto px-4 py-4 md:px-8 md:py-8 min-w-0">
 
             {errorMsg && (
               <div className="flex items-start gap-2 bg-red-50 border border-red-100 text-red-600 text-xs px-3 py-2.5 rounded-lg mb-4 max-w-md">
@@ -955,7 +960,7 @@ export default function TodoPage({ email, onLogout }: Props) {
 
             {/* Account summary */}
             {profile && (
-              <div className="max-w-4xl grid grid-cols-3 gap-3 mb-4">
+              <div className="max-w-4xl grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
                 <div className="bg-white border border-[#D2D2D7] rounded-xl p-3 text-center shadow-sm shadow-black/[0.03]">
                   <p className="text-[11px] text-[#86868B]">가입일</p>
                   <p className="text-sm font-semibold text-[#1D1D1F] mt-0.5">{formatDate(profile.createdAt)}</p>
@@ -1375,7 +1380,7 @@ export default function TodoPage({ email, onLogout }: Props) {
           ) : (
           <>
           {/* Left: Todo list */}
-          <div className="flex-1 overflow-y-auto px-6 py-6 min-w-0">
+          <div className="md:flex-1 md:overflow-y-auto px-4 py-4 md:px-6 md:py-6 min-w-0">
             <div className="max-w-2xl mx-auto">
 
             {errorMsg && (
@@ -1406,21 +1411,21 @@ export default function TodoPage({ email, onLogout }: Props) {
               <div className="flex items-center gap-2 flex-shrink-0">
                 <button
                   onClick={() => setShowCategoryForm(true)}
-                  className="flex items-center gap-1.5 border border-[#D2D2D7] hover:bg-[#F5F5F7] text-[#1D1D1F] text-sm font-medium px-3.5 py-2 rounded-lg transition-colors"
+                  className="flex items-center gap-1.5 border border-[#D2D2D7] hover:bg-[#F5F5F7] text-[#1D1D1F] text-sm font-medium px-2.5 sm:px-3.5 py-2 rounded-lg transition-colors"
                 >
-                  <svg className="w-3.5 h-3.5" viewBox="0 0 14 14" fill="none">
+                  <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 14 14" fill="none">
                     <path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
                   </svg>
-                  새 카테고리
+                  <span className="hidden sm:inline">새 카테고리</span>
                 </button>
                 <button
                   onClick={() => setShowForm(true)}
-                  className="flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium px-3.5 py-2 rounded-lg transition-colors"
+                  className="flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium px-2.5 sm:px-3.5 py-2 rounded-lg transition-colors"
                 >
-                  <svg className="w-3.5 h-3.5" viewBox="0 0 14 14" fill="none">
+                  <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 14 14" fill="none">
                     <path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
                   </svg>
-                  새 할 일
+                  <span className="hidden sm:inline">새 할 일</span>
                 </button>
               </div>
             </div>
@@ -1452,7 +1457,7 @@ export default function TodoPage({ email, onLogout }: Props) {
             </div>
 
             {/* Status cards */}
-            <div className="grid grid-cols-4 gap-2 mb-5">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-5">
               {statusCards.map(card => {
                 const isActive = !selectedDate && statusFilter === card.key;
                 return (
@@ -1562,11 +1567,11 @@ export default function TodoPage({ email, onLogout }: Props) {
 
           {showCalendar && (
             <>
-              {/* Divider */}
-              <div className="w-px bg-[#D2D2D7] flex-shrink-0" />
+              {/* Divider — horizontal on mobile, vertical on desktop */}
+              <div className="h-px md:h-auto md:w-px bg-[#D2D2D7] flex-shrink-0" />
 
               {/* Right: Calendar */}
-              <div className="flex-1 overflow-y-auto px-6 py-6 min-w-0">
+              <div className="md:flex-1 md:overflow-y-auto px-4 py-4 md:px-6 md:py-6 min-w-0">
                 <Calendar
                   todos={allTodos}
                   categories={categories}
