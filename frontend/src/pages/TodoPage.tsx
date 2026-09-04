@@ -164,6 +164,7 @@ export default function TodoPage({ email, onLogout }: Props) {
   const [showDeleteAccount, setShowDeleteAccount] = useState(false);
   const [deleteAccountPassword, setDeleteAccountPassword] = useState('');
   const [focusedTodoId, setFocusedTodoId] = useState<number | null>(null);
+  const [nicknameSaved, setNicknameSaved] = useState(false);
 
   function bumpStampVersion(id: number) {
     setStampVersions(v => ({ ...v, [id]: (v[id] ?? 0) + 1 }));
@@ -327,7 +328,11 @@ export default function TodoPage({ email, onLogout }: Props) {
 
   const updateNicknameMutation = useMutation({
     mutationFn: (nickname: string) => updateNickname(nickname),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['profile'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['profile'] });
+      setNicknameSaved(true);
+      window.setTimeout(() => setNicknameSaved(false), 2000);
+    },
     onError: err => setErrorMsg(extractErrorMessage(err, '닉네임을 변경하지 못했습니다.')),
   });
 
@@ -743,10 +748,11 @@ export default function TodoPage({ email, onLogout }: Props) {
                                 />
                                 <button
                                   type="button"
+                                  disabled={deleteStampMutation.isPending && deleteStampMutation.variables === cat.id}
                                   onClick={() => deleteStampMutation.mutate(cat.id)}
-                                  className="text-xs text-[#86868B] hover:text-red-500 transition-colors"
+                                  className="text-xs text-[#86868B] hover:text-red-500 transition-colors disabled:opacity-50 disabled:pointer-events-none"
                                 >
-                                  이미지 삭제
+                                  {deleteStampMutation.isPending && deleteStampMutation.variables === cat.id ? '삭제 중…' : '이미지 삭제'}
                                 </button>
                               </>
                             ) : (
@@ -987,14 +993,21 @@ export default function TodoPage({ email, onLogout }: Props) {
 
                   {/* Profile image */}
                   <div className="flex items-center gap-4">
-                    <ProfileAvatar
-                      email={email}
-                      hasProfileImage={profile?.hasProfileImage ?? false}
-                      version={avatarVersion}
-                      className="w-20 h-20 text-2xl flex-shrink-0"
-                    />
+                    <div className="relative flex-shrink-0">
+                      <ProfileAvatar
+                        email={email}
+                        hasProfileImage={profile?.hasProfileImage ?? false}
+                        version={avatarVersion}
+                        className="w-20 h-20 text-2xl"
+                      />
+                      {uploadProfileImageMutation.isPending && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-white/70 rounded-full">
+                          <span className="w-5 h-5 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+                        </div>
+                      )}
+                    </div>
                     <div>
-                      <label className="inline-block text-sm text-orange-600 hover:text-orange-700 font-medium cursor-pointer transition-colors">
+                      <label className={`inline-block text-sm text-orange-600 hover:text-orange-700 font-medium cursor-pointer transition-colors ${uploadProfileImageMutation.isPending ? 'pointer-events-none opacity-50' : ''}`}>
                         이미지 변경
                         <input
                           type="file"
@@ -1010,10 +1023,11 @@ export default function TodoPage({ email, onLogout }: Props) {
                       {profile?.hasProfileImage && (
                         <button
                           type="button"
+                          disabled={deleteProfileImageMutation.isPending || uploadProfileImageMutation.isPending}
                           onClick={() => deleteProfileImageMutation.mutate()}
-                          className="block mt-1 text-xs text-[#86868B] hover:text-red-500 transition-colors"
+                          className="block mt-1 text-xs text-[#86868B] hover:text-red-500 transition-colors disabled:opacity-50 disabled:pointer-events-none"
                         >
-                          이미지 제거
+                          {deleteProfileImageMutation.isPending ? '제거 중…' : '이미지 제거'}
                         </button>
                       )}
                     </div>
@@ -1036,14 +1050,26 @@ export default function TodoPage({ email, onLogout }: Props) {
                       {nicknameInput !== null && nicknameInput !== (profile?.nickname ?? '') && (
                         <button
                           type="button"
+                          disabled={updateNicknameMutation.isPending}
                           onClick={() => {
                             updateNicknameMutation.mutate(nicknameInput);
                             setNicknameInput(null);
                           }}
-                          className="text-sm text-orange-600 hover:text-orange-700 font-medium flex-shrink-0 px-3 py-2 rounded-lg hover:bg-orange-50 transition-colors"
+                          className="flex items-center gap-1.5 text-sm text-orange-600 hover:text-orange-700 font-medium flex-shrink-0 px-3 py-2 rounded-lg hover:bg-orange-50 transition-colors disabled:opacity-50"
                         >
+                          {updateNicknameMutation.isPending && (
+                            <span className="w-3.5 h-3.5 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+                          )}
                           저장
                         </button>
+                      )}
+                      {nicknameSaved && !updateNicknameMutation.isPending && (
+                        <span className="text-xs text-green-600 flex-shrink-0 flex items-center gap-1">
+                          <svg className="w-3 h-3" viewBox="0 0 12 12" fill="none">
+                            <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                          저장됨
+                        </span>
                       )}
                     </div>
                   </div>
@@ -1359,8 +1385,9 @@ export default function TodoPage({ email, onLogout }: Props) {
                   <div className="flex gap-2">
                     <button
                       type="button"
+                      disabled={deleteAccountMutation.isPending}
                       onClick={() => { setShowDeleteAccount(false); setDeleteAccountPassword(''); }}
-                      className="flex-1 text-sm text-[#86868B] border border-[#D2D2D7] py-2 rounded-lg hover:bg-[#F5F5F7] transition-colors"
+                      className="flex-1 text-sm text-[#86868B] border border-[#D2D2D7] py-2 rounded-lg hover:bg-[#F5F5F7] transition-colors disabled:opacity-50"
                     >
                       취소
                     </button>
