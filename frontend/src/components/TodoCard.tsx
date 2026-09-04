@@ -82,50 +82,37 @@ export default function TodoCard({ todo, stampShape, categoryId, hasCustomStamp,
         } ${pressed ? 'card-press' : ''} ${deletePending ? 'opacity-40 pointer-events-none' : ''}`}
       >
 
-        {/* Stamp button */}
+        {/* Stamp button — dedicated completion area on the left */}
         <button
           onClick={handleToggle}
           disabled={togglePending}
           aria-label={todo.completed ? '도장 취소' : '도장 찍기'}
           aria-busy={togglePending}
-          className={`relative z-10 flex-shrink-0 w-8 h-8 -my-1 rounded-full border-2 transition-all flex items-center justify-center disabled:cursor-wait ${
+          className={`relative z-10 flex-shrink-0 w-10 h-10 rounded-xl border-2 transition-all flex items-center justify-center disabled:cursor-wait ${
             todo.completed
-              ? 'border-green-700/70 text-green-700/80'
+              ? 'border-green-500 bg-green-50 text-green-700'
               : overdue
-              ? 'border-red-300 text-red-200 hover:border-red-400 hover:text-red-400 hover:bg-red-50'
+              ? 'border-red-300 text-red-300 hover:border-red-400 hover:text-red-500 hover:bg-red-50'
               : approaching
-              ? 'border-orange-300 text-orange-200 hover:border-orange-400 hover:text-orange-400 hover:bg-orange-50'
-              : 'border-[#C7C7CC] text-[#D2D2D7] hover:border-[#98989D] hover:text-[#AEAEB2] hover:bg-[#FAFAFC]'
+              ? 'border-orange-300 text-orange-300 hover:border-orange-400 hover:text-orange-500 hover:bg-orange-50'
+              : 'border-[#D2D2D7] text-[#C7C7CC] hover:border-[#98989D] hover:text-[#AEAEB2] hover:bg-[#FAFAFC]'
           }`}
         >
           {togglePending ? (
-            <span className="w-3.5 h-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" />
+            <span className="w-4 h-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
           ) : (
             <CategoryStamp
               categoryId={categoryId}
               stampShape={stampShape}
               hasCustomStamp={hasCustomStamp}
               version={stampVersion}
-              className={`w-4 h-4 ${todo.completed ? 'stamp-mark -rotate-[9deg]' : ''}`}
+              className={`${todo.completed ? 'w-6 h-6 stamp-mark -rotate-[9deg]' : 'w-5 h-5'}`}
             />
           )}
         </button>
 
         {/* Content */}
         <div className="relative flex-1 min-w-0">
-
-          {/* Large stamp watermark, pressed onto the card when completed */}
-          {todo.completed && (
-            <div className="pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 stamp-overlay opacity-80">
-              <CategoryStamp
-                categoryId={categoryId}
-                stampShape={stampShape}
-                hasCustomStamp={hasCustomStamp}
-                version={stampVersion}
-                className="w-14 h-14 text-green-700 -rotate-[11deg]"
-              />
-            </div>
-          )}
 
           <div className="flex items-center gap-2 flex-wrap">
             <span className={`text-sm ${
