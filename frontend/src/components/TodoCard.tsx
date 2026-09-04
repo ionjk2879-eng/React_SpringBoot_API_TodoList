@@ -100,22 +100,26 @@ export default function TodoCard({ todo, stampShape, categoryId, hasCustomStamp,
             <span className={`w-6 h-6 rounded-full border-2 border-t-transparent animate-spin ${
               todo.completed ? 'border-green-500' : 'border-[#C7C7CC]'
             }`} />
-          ) : (
+          ) : todo.completed ? (
             <CategoryStamp
               categoryId={categoryId}
               stampShape={stampShape}
               hasCustomStamp={hasCustomStamp}
               version={stampVersion}
-              className={`transition-all ${
-                todo.completed
-                  ? 'w-10 h-10 text-green-700 stamp-mark -rotate-[12deg]'
-                  : overdue
-                  ? 'w-8 h-8 text-red-200 hover:text-red-400'
-                  : approaching
-                  ? 'w-8 h-8 text-orange-200 hover:text-orange-400'
-                  : 'w-8 h-8 text-[#D2D2D7] hover:text-[#AEAEB2]'
-              }`}
+              className="w-10 h-10 text-green-700 stamp-mark -rotate-[12deg]"
             />
+          ) : (
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              className={`w-8 h-8 transition-colors ${
+                overdue ? 'text-red-300 hover:text-red-500'
+                : approaching ? 'text-orange-300 hover:text-orange-500'
+                : 'text-[#D2D2D7] hover:text-[#AEAEB2]'
+              }`}
+            >
+              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.6" />
+            </svg>
           )}
         </button>
 
