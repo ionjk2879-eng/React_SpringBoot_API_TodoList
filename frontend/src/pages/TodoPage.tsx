@@ -1348,15 +1348,15 @@ export default function TodoPage({ email, onLogout }: Props) {
             )}
 
             {/* Title row */}
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <div className="flex items-baseline gap-2">
-                  <h1 className="text-xl font-semibold text-[#1D1D1F]">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-baseline gap-2 min-w-0">
+                  <h1 className="text-xl font-semibold text-[#1D1D1F] truncate">
                     {activeCategory ? activeCategory.name : '전체 할 일'}
                   </h1>
-                  <span className="text-xs text-[#AEAEB2]">{formatToday()}</span>
+                  <span className="text-xs text-[#AEAEB2] flex-shrink-0">{formatToday()}</span>
                 </div>
-                <p className="text-sm text-[#86868B] mt-0.5">
+                <p className="text-sm text-[#86868B] mt-0.5 truncate">
                   해야 할 일 {counts.todo}개 · 마감임박 {counts.progress}개 · 기한초과 {counts.overdue}개 · 완료 {counts.done}개
                 </p>
               </div>
