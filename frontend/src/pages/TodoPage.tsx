@@ -171,11 +171,30 @@ export default function TodoPage({ email, onLogout }: Props) {
   }
 
   function extractErrorMessage(err: unknown, fallback: string): string {
-    const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-    return message ?? fallback;
+    const e = err as {
+      response?: { status: number; data?: { message?: string } };
+      code?: string;
+      message?: string;
+    };
+    if (!e?.response) {
+      if (e?.code === 'ECONNABORTED' || e?.message?.includes('timeout')) {
+        return `${fallback} (요청 시간이 초과됐습니다)`;
+      }
+      return `${fallback} (인터넷 연결을 확인해주세요)`;
+    }
+    const { status, data } = e.response;
+    if (data?.message) return data.message;
+    if (status === 400) return `${fallback} (입력값을 다시 확인해주세요)`;
+    if (status === 403) return '접근 권한이 없습니다';
+    if (status === 404) return `${fallback} (항목을 찾을 수 없습니다)`;
+    if (status === 409) return `${fallback} (이미 존재하는 항목입니다)`;
+    if (status === 413) return '파일 크기가 너무 큽니다 (최대 5MB)';
+    if (status === 422) return `${fallback} (입력값을 다시 확인해주세요)`;
+    if (status >= 500) return `${fallback} (서버 오류 · 잠시 후 다시 시도해주세요)`;
+    return fallback;
   }
 
-  const { data: todoPage, isLoading, isError } = useQuery({
+  const { data: todoPage, isLoading, isError, error: todosError } = useQuery({
     queryKey: ['todos', selectedCategory],
     queryFn: () => getTodos(0, selectedCategory, 500),
   });
@@ -559,6 +578,12 @@ export default function TodoPage({ email, onLogout }: Props) {
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!errorMsg) return;
+    const timer = window.setTimeout(() => setErrorMsg(null), 6000);
+    return () => clearTimeout(timer);
+  }, [errorMsg]);
 
   function handleReminderLeadHoursChange(hours: number) {
     setReminderLeadHours(hours);
@@ -1535,10 +1560,19 @@ export default function TodoPage({ email, onLogout }: Props) {
               </div>
             ) : isError ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
-                <p className="text-sm font-medium text-[#86868B]">할 일을 불러오지 못했습니다</p>
+                <div className="w-10 h-10 bg-red-50 rounded-full flex items-center justify-center mb-3">
+                  <svg className="w-5 h-5 text-red-400" viewBox="0 0 20 20" fill="none">
+                    <circle cx="10" cy="10" r="8.5" stroke="currentColor" strokeWidth="1.3" />
+                    <path d="M10 6v4M10 13v1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
+                </div>
+                <p className="text-sm font-medium text-[#1D1D1F]">할 일을 불러오지 못했습니다</p>
+                <p className="text-xs text-[#AEAEB2] mt-1 max-w-xs">
+                  {extractErrorMessage(todosError, '네트워크 연결을 확인해주세요')}
+                </p>
                 <button
                   onClick={() => qc.invalidateQueries({ queryKey: ['todos'] })}
-                  className="text-xs text-orange-600 hover:text-orange-700 font-medium mt-2 px-3 py-1.5 rounded-md hover:bg-orange-50 transition-colors"
+                  className="text-xs text-orange-600 hover:text-orange-700 font-medium mt-3 px-3 py-1.5 rounded-md hover:bg-orange-50 transition-colors"
                 >
                   다시 시도
                 </button>
